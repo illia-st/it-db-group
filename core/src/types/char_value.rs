@@ -1,7 +1,27 @@
+use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
+
+#[derive(Clone, Default)]
 pub struct CharValue {
     value: char,
+}
+impl CharValue {
+    fn new(value: char) -> Self {
+        Self { value }
+    }
+    pub fn builder() -> CharValueBuilder {
+        CharValueBuilder::default()
+    }
+    pub fn get_value(&self) -> char {
+        self.value
+    }
+}
+
+impl CellValue for CharValue {
+    fn get_value(&self) -> ValueType {
+        ValueType::Char(self.clone())
+    }
 }
 #[derive(Default)]
 pub struct CharValueBuilder {
@@ -37,18 +57,6 @@ impl ValueBuilder for CharValueBuilder {
     fn with_raw_value(mut self, raw_value: String) -> Self {
         self.row_value = Some(raw_value);
         self
-    }
-}
-
-impl CharValue {
-    fn new(value: char) -> Self {
-        Self { value }
-    }
-    pub fn builder() -> CharValueBuilder {
-        CharValueBuilder::default()
-    }
-    pub fn get_value(&self) -> char {
-        self.value
     }
 }
 

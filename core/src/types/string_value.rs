@@ -1,8 +1,17 @@
+use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
+#[derive(Clone, Default)]
 pub struct StringValue {
     value: String,
 }
+
+impl CellValue for StringValue {
+    fn get_value(&self) -> ValueType {
+        ValueType::Str(self.clone())
+    }
+}
+
 #[derive(Default)]
 pub struct StringValueBuilder {
     row_value: Option<String>,

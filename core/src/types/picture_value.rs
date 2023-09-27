@@ -1,9 +1,16 @@
 use image::io::Reader as ImageReader;
 use image::DynamicImage;
+use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
+#[derive(Clone, Default)]
 pub struct PictureValue {
     value: DynamicImage,
+}
+impl CellValue for PictureValue {
+    fn get_value(&self) -> ValueType {
+        ValueType::Pic(self.clone())
+    }
 }
 #[derive(Default)]
 pub struct PictureValueBuilder {

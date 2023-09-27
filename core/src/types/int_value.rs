@@ -1,7 +1,14 @@
+use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
-
+#[derive(Clone, Default)]
 pub struct IntValue {
     value: i64,
+}
+
+impl CellValue for IntValue {
+    fn get_value(&self) -> ValueType {
+        ValueType::Int(self.clone())
+    }
 }
 #[derive(Default)]
 pub struct IntValueBuilder {

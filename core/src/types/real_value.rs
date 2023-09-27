@@ -1,7 +1,15 @@
+use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
+#[derive(Clone, Default)]
 pub struct RealValue {
     value: f64,
+}
+
+impl CellValue for RealValue {
+    fn get_value(&self) -> ValueType {
+        ValueType::Real(self.clone())
+    }
 }
 #[derive(Default)]
 pub struct RealValueBuilder {
