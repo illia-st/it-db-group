@@ -1,0 +1,12 @@
+[workspace]
+
+members = [
+    "core",
+    "db-manager",
+    "runner"
+]
+
+[workspace.dependencies]
+
+log = "0.4.17"
+log4rs = "1.2.0"
