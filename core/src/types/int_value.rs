@@ -1,6 +1,8 @@
+use std::rc::Rc;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
-#[derive(Clone, Default)]
+use value_generator::ValueGenerator;
+#[derive(Clone, Debug, Default, ValueGenerator, PartialEq)]
 pub struct IntValue {
     value: i64,
 }
@@ -59,12 +61,15 @@ impl IntValue {
     pub fn get_value(&self) -> i64 {
         self.value
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use crate::types::int_value::IntValue;
+    use crate::types::ValueType;
     use super::ValueBuilder;
+    use super::get_value_generator;
     #[test]
     fn test_int_creation_success_1() {
         const RAW_VALUE: &str = "1";
@@ -113,5 +118,14 @@ mod tests {
         assert!(builder.validate().is_err());
         let value = builder.build();
         assert!(value.is_err());
+    }
+    #[test]
+    fn test_get_value_generator() {
+        let generator = get_value_generator();
+        let value = generator("1".to_string()).unwrap();
+        match value.as_ref().get_value() {
+            ValueType::Int(value) => assert_eq!(value.get_value(), 1),
+            _ => assert!(false),
+        };
     }
 }

@@ -1,10 +1,12 @@
 [package]
-name = "core"
+name = "value_generator"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+proc-macro = true
 
 [dependencies]
-image = "0.24.7"
-value_generator = { path = "../value_generator" }
+quote = "1.0.33"
+syn = "2.0.37"

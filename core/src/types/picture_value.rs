@@ -1,9 +1,11 @@
+use std::rc::Rc;
 use image::io::Reader as ImageReader;
 use image::DynamicImage;
+use value_generator::ValueGenerator;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq, ValueGenerator)]
 pub struct PictureValue {
     value: DynamicImage,
 }
@@ -65,11 +67,13 @@ impl PictureValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::picture_value::PictureValue;
+    use crate::types::picture_value::{get_value_generator, PictureValue};
     use super::ValueBuilder;
     use crate::test_resources;
     use image::DynamicImage;
     use image::io::Reader as ImageReader;
+    use crate::types::ValueType;
+
     #[test]
     fn test_picture_creation_success_happy_cat_jpg() {
         const RAW_VALUE: &str = test_resources!("happy_cat.jpg");
@@ -115,5 +119,22 @@ mod tests {
         assert!(builder.validate().is_err());
         let value = builder.build();
         assert!(value.is_err());
+    }
+    #[test]
+    fn test_get_value_generator() {
+        const RAW_VALUE: &str = test_resources!("happy_cat.jpg");
+        let expected_result: DynamicImage =
+            ImageReader::open(RAW_VALUE)
+                .unwrap()
+                .decode()
+                .unwrap();
+        let generator = get_value_generator();
+        let value = generator(RAW_VALUE.to_string()).unwrap();
+        match value.as_ref().get_value() {
+            ValueType::Pic(value) => {
+                assert_eq!(value.get_value().as_bytes(), expected_result.as_bytes())
+            },
+            _ => assert!(false),
+        };
     }
 }

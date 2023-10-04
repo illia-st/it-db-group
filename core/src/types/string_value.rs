@@ -1,7 +1,9 @@
+use std::rc::Rc;
+use value_generator::ValueGenerator;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq, ValueGenerator)]
 pub struct StringValue {
     value: String,
 }
@@ -53,7 +55,8 @@ impl StringValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::string_value::StringValue;
+    use crate::types::string_value::{get_value_generator, StringValue};
+    use crate::types::ValueType;
     use super::ValueBuilder;
     #[test]
     fn test_string_creation_success_1() {
@@ -85,5 +88,16 @@ mod tests {
         assert!(builder.validate().is_err());
         let value = builder.build();
         assert!(value.is_err());
+    }
+    #[test]
+    fn test_get_value_generator() {
+        // https://www.youtube.com/watch?v=Q9OZpSgiLGQ
+        const RAW_VALUE: &str = "21st Century";
+        let generator = get_value_generator();
+        let value = generator(RAW_VALUE.to_string()).unwrap();
+        match value.as_ref().get_value() {
+            ValueType::Str(value) => assert_eq!(value.get_value(), RAW_VALUE),
+            _ => assert!(false),
+        };
     }
 }

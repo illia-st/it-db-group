@@ -2,9 +2,13 @@
 
 members = [
     "core",
+    "db",
     "db-manager",
-    "runner"
+    "runner",
+    "value_generator",
 ]
+
+resolver = "2"
 
 [workspace.dependencies]
 

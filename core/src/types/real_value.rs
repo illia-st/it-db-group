@@ -1,7 +1,9 @@
+use std::rc::Rc;
+use value_generator::ValueGenerator;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq, ValueGenerator)]
 pub struct RealValue {
     value: f64,
 }
@@ -62,7 +64,8 @@ impl RealValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::real_value::RealValue;
+    use crate::types::real_value::{get_value_generator, RealValue};
+    use crate::types::ValueType;
     use super::ValueBuilder;
     #[test]
     fn test_real_creation_success_1() {
@@ -135,5 +138,14 @@ mod tests {
         assert!(builder.validate().is_err());
         let value = builder.build();
         assert!(value.is_err());
+    }
+    #[test]
+    fn test_get_value_generator() {
+        let generator = get_value_generator();
+        let value = generator("1.23".to_string()).unwrap();
+        match value.as_ref().get_value() {
+            ValueType::Real(value) => assert_eq!(value.get_value(), 1.23),
+            _ => assert!(false),
+        };
     }
 }

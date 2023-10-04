@@ -1,8 +1,10 @@
+use std::rc::Rc;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
+use value_generator::ValueGenerator;
 
 
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq, ValueGenerator)]
 pub struct CharValue {
     value: char,
 }
@@ -62,7 +64,8 @@ impl ValueBuilder for CharValueBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::char_value::CharValue;
+    use crate::types::char_value::{CharValue, get_value_generator};
+    use crate::types::ValueType;
     use super::ValueBuilder;
     #[test]
     fn test_char_creation_success_1() {
@@ -123,5 +126,14 @@ mod tests {
         assert!(builder.validate().is_err());
         let value = builder.build();
         assert!(value.is_err());
+    }
+    #[test]
+    fn test_get_value_generator() {
+        let generator = get_value_generator();
+        let value = generator("a".to_string()).unwrap();
+        match value.as_ref().get_value() {
+            ValueType::Char(value) => assert_eq!(value.get_value(), 'a'),
+            _ => assert!(false),
+        };
     }
 }
