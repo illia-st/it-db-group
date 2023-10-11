@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use value_generator::ValueGenerator;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
@@ -59,6 +60,10 @@ impl RealValue {
     }
     pub fn get_value(&self) -> f64 {
         self.value
+    }
+
+    pub fn get_type_name() -> String {
+        "RealValue".to_string()
     }
 }
 

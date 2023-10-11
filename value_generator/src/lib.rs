@@ -6,7 +6,7 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, .. } = parse_macro_input!(input);
     let output = quote! {
-        pub fn get_value_generator() -> Rc<fn(String) -> Result<Rc<dyn CellValue>, String>> {
+        pub fn get_value_generator() -> Arc<fn(String) -> Result<Rc<dyn CellValue>, String>> {
             let value_generator = |raw_value| {
                 let value = #ident::builder()
                     .with_raw_value(raw_value)
@@ -21,7 +21,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                     }
                 }
             };
-            Rc::new(value_generator)
+            Arc::new(value_generator)
         }
     };
     output.into()

@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 use value_generator::ValueGenerator;
@@ -17,6 +18,9 @@ impl CharValue {
     }
     pub fn get_value(&self) -> char {
         self.value
+    }
+    pub fn get_type_name() -> String {
+        "CharValue".to_string()
     }
 }
 

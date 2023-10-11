@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use image::io::Reader as ImageReader;
 use image::DynamicImage;
 use value_generator::ValueGenerator;
@@ -62,6 +63,9 @@ impl PictureValue {
     }
     pub fn get_value(&self) -> &DynamicImage {
         &self.value
+    }
+    pub fn get_type_name() -> String {
+        "PictureValue".to_string()
     }
 }
 

@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::Arc;
 use crate::types::{CellValue, ValueType};
 use super::ValueBuilder;
 use value_generator::ValueGenerator;
@@ -61,7 +62,9 @@ impl IntValue {
     pub fn get_value(&self) -> i64 {
         self.value
     }
-
+    pub fn get_type_name() -> String {
+        "IntValue".to_string()
+    }
 }
 
 #[cfg(test)]
