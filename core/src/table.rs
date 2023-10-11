@@ -1,13 +1,15 @@
 use std::cell::RefCell;
+use std::rc::Rc;
 use crate::row::Row;
 use crate::scheme::Scheme;
 use crate::types::CellValue;
 
+#[derive(Clone)]
 pub struct Table {
     name: String,
     #[allow(dead_code)]
     scheme: Scheme<dyn CellValue>,
-    rows: RefCell<Vec<Row<dyn CellValue>>>,
+    rows: RefCell<Vec<Rc<Row<dyn CellValue>>>>,
 }
 
 impl Table
@@ -18,6 +20,9 @@ impl Table
             scheme,
             rows: RefCell::new(Vec::default()),
         }
+    }
+    pub fn builder() -> TableBuilder {
+        TableBuilder::default()
     }
     pub fn add_row(&self, _new_row: Row<dyn CellValue>) {
         todo!("add scheme validation");

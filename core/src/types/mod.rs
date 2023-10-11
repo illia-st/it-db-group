@@ -24,7 +24,7 @@ pub trait CellValue: Debug {
 }
 
 lazy_static! {
-    static ref SUPPORTED_TYPES: HashMap<String, Arc<fn(String) -> Result<Rc<dyn CellValue>, String>>> = {
+    pub static ref SUPPORTED_TYPES: HashMap<String, Arc<fn(String) -> Result<Rc<dyn CellValue>, String>>> = {
         let mut supported_types = HashMap::new();
         supported_types.insert(IntValue::get_type_name(), crate::types::int_value::get_value_generator());
         supported_types.insert(CharValue::get_type_name(), crate::types::char_value::get_value_generator());

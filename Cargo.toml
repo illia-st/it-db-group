@@ -2,7 +2,6 @@
 
 members = [
     "core",
-    "db",
     "db-manager",
     "runner",
     "value_generator",

@@ -1,7 +1,7 @@
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 
-use core::table::Table;
+use crate::table::Table;
 
 pub struct Database {
     name: String,

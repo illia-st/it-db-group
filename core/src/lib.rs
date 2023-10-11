@@ -1,8 +1,8 @@
 pub mod row;
-pub mod column;
 pub mod types;
 pub mod scheme;
 pub mod table;
+pub mod db;
 
 #[macro_export]
 macro_rules! test_resources {
