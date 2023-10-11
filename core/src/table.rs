@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use crate::row::Row;
 use crate::scheme::Scheme;
@@ -50,6 +50,20 @@ impl Table
     }
     pub fn get_scheme(&self) -> &Scheme<dyn CellValue> {
         &self.scheme
+    }
+
+    pub fn get_scheme_mut(&mut self) -> &mut Scheme<dyn CellValue> {
+        &mut self.scheme
+    }
+
+    pub fn get_rows(&self) -> Ref<Vec<Rc<Row<dyn CellValue>>>> {
+        self.rows.borrow()
+    }
+    pub fn get_columns(&self) -> Vec<String> {
+        self.scheme.get_columns()
+    }
+    pub fn set_rows(&self, rows: Vec<Rc<Row<dyn CellValue>>>) {
+        *self.rows.borrow_mut() = rows;
     }
 }
 #[derive(Default)]

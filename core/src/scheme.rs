@@ -39,6 +39,12 @@ where
     pub fn get_validators(&self) -> &[Arc<fn(String) -> Result<Rc<T>, String>>] {
         self.value_generators.as_slice()
     }
+    pub fn get_columns(&self) -> Vec<String> {
+        self.columns.clone()
+    }
+    pub fn set_columns(&mut self, columns: Vec<String>) {
+        self.columns = columns;
+    }
 }
 #[derive(Default)]
 pub struct SchemeBuilder<T>
