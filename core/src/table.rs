@@ -24,9 +24,8 @@ impl Table
     pub fn builder() -> TableBuilder {
         TableBuilder::default()
     }
-    pub fn add_row(&self, _new_row: Row<dyn CellValue>) {
-        todo!("add scheme validation");
-        // self.rows.borrow_mut().push(new_row);
+    pub fn add_row(&self, new_row: Row<dyn CellValue>) {
+        self.rows.borrow_mut().push(Rc::new(new_row));
     }
     pub fn pop(&self) {
         self.rows.borrow_mut().pop();
