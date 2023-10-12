@@ -4,7 +4,7 @@ use crate::row::Row;
 use crate::scheme::Scheme;
 use crate::types::CellValue;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Table {
     name: String,
     #[allow(dead_code)]

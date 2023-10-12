@@ -1,30 +1,33 @@
-use ratatui::{
-    prelude::{CrosstermBackend, Terminal},
-    widgets::Paragraph,
-};
+use ratatui::prelude::CrosstermBackend;
+use ratatui::prelude::Terminal;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    crossterm::terminal::enable_raw_mode()?;
-    crossterm::execute!(std::io::stderr(), crossterm::terminal::EnterAlternateScreen)?;
+use anyhow::Result;
+use runner::app::App;
+use runner::tui::event::{Event, EventHandler};
+use runner::tui::Tui;
+use runner::tui::update::update;
 
-    let mut terminal = Terminal::new(CrosstermBackend::new(std::io::stderr()))?;
 
-    loop {
-        terminal.draw(|f| {
-            f.render_widget(Paragraph::new("Hello World! (press 'q' to quit)"), f.size());
-        })?;
+fn main() -> Result<()> {
+    let mut app = App::new();
 
-        if crossterm::event::poll(std::time::Duration::from_millis(250))? {
-            if let crossterm::event::Event::Key(key) = crossterm::event::read()? {
-                if key.code == crossterm::event::KeyCode::Char('q') {
-                    break;
-                }
-            }
-        }
+    let backend = CrosstermBackend::new(std::io::stderr());
+    let terminal = Terminal::new(backend)?;
+    let events = EventHandler::new(250);
+    let mut tui = Tui::new(terminal, events);
+    tui.enter()?;
+
+    while !app.should_quit() {
+        tui.draw(&mut app)?;
+
+        match tui.events.next()? {
+            Event::Tick => {},
+            Event::Key(key_event) => update(&mut app, key_event),
+            Event::Mouse(_) => {},
+            Event::Resize(_, _) => {},
+        };
     }
 
-    crossterm::execute!(std::io::stderr(), crossterm::terminal::LeaveAlternateScreen)?;
-    crossterm::terminal::disable_raw_mode()?;
-
+    tui.exit()?;
     Ok(())
 }

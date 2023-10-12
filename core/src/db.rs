@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use crate::table::Table;
 
+#[derive(Debug)]
 pub struct Database {
     name: String,
     location: String,

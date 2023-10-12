@@ -13,11 +13,17 @@ use core::types::SUPPORTED_TYPES;
 use core::table::Table;
 
 // Can operate with one db-manager at the time
-#[derive(Default)]
+#[derive(Debug)]
 pub struct DatabaseManager {
     #[allow(clippy::type_complexity)]
     supported_types: HashMap<String, Arc<fn(String) -> Result<Rc<dyn CellValue>, String>>>,
     database: RefCell<Option<Database>>,
+}
+
+impl Default for DatabaseManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DatabaseManager {
@@ -213,6 +219,12 @@ impl DatabaseManager {
         }
         Ok(self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect())
     }
+    pub fn db_is_opened(&self) -> bool {
+        self.database.borrow().is_some()
+    }
+    pub fn get_table_list(&self) -> Vec<String> {
+        self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect::<Vec<String>>()
+    }
 
     pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str) -> Result<Table, String> {
         if self.database.borrow().is_none() {
@@ -276,6 +288,10 @@ impl DatabaseManager {
         };
         res
     }
+
+    pub fn get_database_name(&self) -> String{
+        self.database.borrow().as_ref().unwrap().get_name().to_owned()
+    }
 }
 
 impl Drop for DatabaseManager {
@@ -286,8 +302,6 @@ impl Drop for DatabaseManager {
 
 #[cfg(test)]
 mod tests {
-    
-
     #[test]
     fn test_creating_db_manager() {
         // DatabaseManager::new();

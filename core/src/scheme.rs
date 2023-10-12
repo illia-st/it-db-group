@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 use crate::types::CellValue;
 
+#[derive(Debug)]
 pub struct Scheme<T>
 where
     T: CellValue + ?Sized,
