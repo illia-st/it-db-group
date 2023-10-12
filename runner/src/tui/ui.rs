@@ -1,3 +1,5 @@
+use core::types::CellValue;
+use std::f32::consts::E;
 use std::ops::Deref;
 
 use rand::Rng;
@@ -168,6 +170,9 @@ fn render_active_table(f: &mut Frame, layout: Rect, color: Color, table_result: 
                     },
                     core::types::ValueType::Date(date) => {
                         date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().as_str().to_owned()
                     },
                 };
             row_content.push(cell_content);

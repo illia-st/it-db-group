@@ -60,7 +60,8 @@ impl DatabaseManager {
         Ok(())
     }
 
-    pub fn read_db_from_directory(&self, location: &str) -> Result<(), String> {
+    pub fn read_db_from_directory(&self, dir: &str, file_name: &str) -> Result<(), String> {
+        let location = &format!("{}/{}", dir, file_name);
         // need to close the previous one
         let _ = self.close_db(true);
         // check if provided location is a dir
@@ -73,7 +74,7 @@ impl DatabaseManager {
             Err(err) => return Err(format!("couldn't read the file {}: {}", location, err))
         };
         // read file location/table using amazon ion
-        let database = match fs::read(format!("{}/{}", location, "tables")) {
+        let database = match fs::read(location) {
             Ok(database) => database,
             Err(err) => {
                 let err_string = format!("The error is occurred while trying to read tables: {}", err);
@@ -85,6 +86,7 @@ impl DatabaseManager {
         self.database.borrow_mut().replace(Database::from(db_dto));
         Ok(())
     }
+    
     pub fn create_table(&self, table_name: &str, columns: Vec<&str>, data_types: Vec<&str>) -> Result<(), String> {
         // 1) check if the table already exists
         if self.database.borrow().is_none() {
@@ -184,13 +186,19 @@ impl DatabaseManager {
         let db = self.database.take().unwrap();
         let res = if save {
             let db_dto: DatabaseDTO = db.into();
-            let mut file = match File::open(db_dto.location.as_str()) {
+            let location = &format!("{}/{}", db_dto.location, db_dto.name);
+            let fd = fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(location);
+            let mut file = match fd {
                 Ok(file) => file,
-                Err(err) => return Err(format!("couldn't open the file to save {}: {}", db_dto.name, err))
+                Err(err) => return Err(format!("couldn't open the file to save {}: {}", location, err))
             };
             match file.write_all(db_dto.encode().as_slice()) {
                 Ok(_) => Ok(()),
-                Err(err) => Err(format!("couldn't write to the file to save {}: {}", db_dto.name, err)),
+                Err(err) => Err(format!("couldn't write to the file to save {}: {}", location, err)),
             }
         } else {
             Ok(())

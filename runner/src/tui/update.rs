@@ -85,7 +85,8 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                     },
                     Some(("open", args)) => {
                         app.open_database(
-                            args.get_one::<String>("database_path").unwrap().to_owned()
+                            args.get_one::<String>("database_path").unwrap().to_owned(),
+                            args.get_one::<String>("database_name").unwrap().to_owned()
                         );
                     },
                     _ => {
@@ -128,6 +129,9 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                             args.get_one::<String>("row_value").unwrap().to_owned(),
                         );
                     }
+                    Some(("close", args)) => {
+                        app.close_database(args.get_flag("save"))
+                    },
                     _ => {
                         app.opened_database_error("Unsupported comand for this hood".to_owned());
                     },

@@ -34,7 +34,8 @@ impl StringValueDTO {
         binary_user_reader.step_in().unwrap();
 
         binary_user_reader.next().unwrap();
-        let value = binary_user_reader.read_string().unwrap().to_string();
-        StringValueDTO::new(StringValue::new(value))
+        let binding = binary_user_reader.read_string().unwrap();
+        let value = binding.text();
+        StringValueDTO::new(StringValue::new(value.to_owned()))
     }
 }

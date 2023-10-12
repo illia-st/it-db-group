@@ -76,8 +76,8 @@ impl App {
             },
         }
     }
-    pub fn open_database(&mut self, database_path: String) {
-        let result = self.database_manager.read_db_from_directory(&database_path);
+    pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
+        let result = self.database_manager.read_db_from_directory(&database_dir_path, &database_name);
         match result {
             Ok(_) => {
                 self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
