@@ -2,15 +2,18 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
+use std::io::Write;
 use std::ops::DerefMut;
 use std::rc::Rc;
 use std::sync::Arc;
+
 use core::db::Database;
 use core::types::CellValue;
 use core::scheme::Scheme;
 use core::row::Row;
 use core::types::SUPPORTED_TYPES;
 use core::table::Table;
+use db_api::db::DatabaseDTO;
 
 // Can operate with one db-manager at the time
 #[derive(Debug)]
@@ -70,7 +73,7 @@ impl DatabaseManager {
             Err(err) => return Err(format!("couldn't read the file {}: {}", location, err))
         };
         // read file location/table using amazon ion
-        let _database = match fs::read(format!("{}/{}", location, "tables")) {
+        let database = match fs::read(format!("{}/{}", location, "tables")) {
             Ok(database) => database,
             Err(err) => {
                 let err_string = format!("The error is occurred while trying to read tables: {}", err);
@@ -78,7 +81,8 @@ impl DatabaseManager {
                 return Err(err_string);
             }
         };
-        // TODO: use ion dto structures to convert database Vec<u8> into Database structure
+        let db_dto = DatabaseDTO::decode(database);
+        self.database.borrow_mut().replace(Database::from(db_dto));
         Ok(())
     }
     pub fn create_table(&self, table_name: &str, columns: Vec<&str>, data_types: Vec<&str>) -> Result<(), String> {
@@ -159,9 +163,7 @@ impl DatabaseManager {
     }
     pub fn delete_row(&self, table_name: &str, index: u64) -> Result<(), String> {
         if self.database.borrow().is_none() {
-            let err_string = "There is no active databases in db-manager manager";
-            log::error!("{}", err_string);
-            return Err(err_string.to_string());
+            return Err("There is no active databases in db-manager manager".to_string());
         }
         let db = self.database.borrow();
         let db_unwrapped = db.as_ref().unwrap();
@@ -177,18 +179,23 @@ impl DatabaseManager {
     }
     pub fn close_db(&self, save: bool) -> Result<(), String> {
         if self.database.borrow().is_none() {
-            let err_string = "There is no active databases in db-manager manager";
-            log::error!("{}", err_string);
-            return Err(err_string.to_string());
+            return Err("There is no active databases in db-manager manager".to_string());
         }
-        let mut db = self.database.borrow_mut();
-        if save {
-            db.as_ref().unwrap().get_tables().iter().for_each(|_table| {
-                todo!("dump the db into the file in binary format")
-            });
-        }
-        *db.deref_mut() = None;
-        Ok(())
+        let db = self.database.take().unwrap();
+        let res = if save {
+            let db_dto: DatabaseDTO = db.into();
+            let mut file = match File::open(db_dto.location.as_str()) {
+                Ok(file) => file,
+                Err(err) => return Err(format!("couldn't open the file to save {}: {}", db_dto.name, err))
+            };
+            match file.write_all(db_dto.encode().as_slice()) {
+                Ok(_) => Ok(()),
+                Err(err) => Err(format!("couldn't write to the file to save {}: {}", db_dto.name, err)),
+            }
+        } else {
+            Ok(())
+        };
+        res
     }
     pub fn delete_db(&self, location: &str) -> Result<(), String> {
         // TODO: it will be nice to check if the provided location actually is a db but who cares?
@@ -226,7 +233,7 @@ impl DatabaseManager {
         self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect::<Vec<String>>()
     }
 
-    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str) -> Result<Table, String> {
+    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, column: &str) -> Result<Table, String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
         }
@@ -259,7 +266,6 @@ impl DatabaseManager {
                 ans.push(rhs_row.clone());
             }
         }
-        // let scheme = Scheme::new(lhs.get_columns(), lhs.get)
         let res = Table::builder()
             .with_scheme(lhs.get_scheme().clone())
             .with_name("Join".to_string())

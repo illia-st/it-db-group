@@ -22,6 +22,15 @@ impl From<SchemeDTO> for Scheme<dyn CellValue> {
     }
 }
 
+impl From<Scheme<dyn CellValue>> for SchemeDTO {
+    fn from(value: Scheme<dyn CellValue>) -> Self {
+        Self {
+            types: value.get_types(),
+            columns: value.get_columns(),
+        }
+    }
+}
+
 impl SchemeDTO {
     pub fn new(types: Vec<String>, columns: Vec<String>) -> Self {
         Self {

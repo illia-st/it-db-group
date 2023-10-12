@@ -1,3 +1,4 @@
+
 use std::rc::Rc;
 use ion_rs;
 use ion_rs::IonWriter;
@@ -23,12 +24,29 @@ impl From<TableDTO> for Table {
         let schema: Scheme<dyn CellValue> = value.scheme.into();
         let table = Table::new(value.name, schema);
         let mut rows: Vec<Rc<Row<dyn CellValue>>> = Vec::with_capacity(value.rows.len());
-        value.rows.iter().for_each(|row| {
-            let new_row = Row::<dyn CellValue>::from(row.clone());
+        value.rows.into_iter().for_each(|row| {
+            let new_row = Row::<dyn CellValue>::from(row);
             rows.push(Rc::new(new_row));
         });
         table.set_rows(rows);
         table
+    }
+}
+
+impl From<Table> for TableDTO {
+    fn from(value: Table) -> Self {
+        let core_rows = value.rows.take();
+        let name = value.name;
+        let scheme: SchemeDTO = value.scheme.into();
+        let mut rows = Vec::<RowDTO>::with_capacity(core_rows.len());
+        for row in core_rows.into_iter() {
+            rows.push(RowDTO::from(row));
+        }
+        Self {
+            name,
+            scheme,
+            rows,
+        }
     }
 }
 

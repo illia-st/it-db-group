@@ -6,10 +6,10 @@ use crate::types::CellValue;
 
 #[derive(Clone, Debug)]
 pub struct Table {
-    name: String,
+    pub name: String,
     #[allow(dead_code)]
-    scheme: Scheme<dyn CellValue>,
-    rows: RefCell<Vec<Rc<Row<dyn CellValue>>>>,
+    pub scheme: Scheme<dyn CellValue>,
+    pub rows: RefCell<Vec<Rc<Row<dyn CellValue>>>>,
 }
 
 impl Table

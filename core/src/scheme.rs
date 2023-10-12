@@ -46,6 +46,10 @@ where
     pub fn get_columns(&self) -> Vec<String> {
         self.columns.clone()
     }
+
+    pub fn get_types(&self) -> Vec<String> {
+        self.types.clone()
+    }
     pub fn set_columns(&mut self, columns: Vec<String>) {
         self.columns = columns;
     }

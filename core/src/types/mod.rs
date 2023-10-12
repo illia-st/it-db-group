@@ -10,6 +10,7 @@ use crate::types::string_value::StringValue;
 use std::collections::HashMap;
 use lazy_static::lazy_static;
 use crate::types::date_value::DateValue;
+use crate::types::email_value::EmailValue;
 
 // TODO: think about how we can refuse from using enum bcs smells like bad design decision
 #[derive(PartialEq)]
@@ -20,6 +21,7 @@ pub enum ValueType {
     Pic(PictureValue),
     Char(CharValue),
     Date(DateValue),
+    Email(EmailValue),
 }
 pub trait CellValue: Debug {
     fn get_value(&self) -> ValueType;
@@ -52,3 +54,4 @@ pub mod real_value;
 pub mod picture_value;
 pub mod char_value;
 pub mod date_value;
+pub mod email_value;

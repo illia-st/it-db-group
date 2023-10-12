@@ -10,9 +10,9 @@ use crate::table::TableDTO;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DatabaseDTO {
-    name: String,
-    location: String,
-    tables: Vec<TableDTO>,
+    pub name: String,
+    pub location: String,
+    pub tables: Vec<TableDTO>,
 }
 
 impl From<DatabaseDTO> for Database {
@@ -24,6 +24,23 @@ impl From<DatabaseDTO> for Database {
         let db = Database::new(value.name, value.location);
         db.set_tables(tables);
         db
+    }
+}
+
+impl From<Database> for DatabaseDTO {
+    fn from(value: Database) -> Self {
+        let tables: Vec<TableDTO> = value.tables
+            .take()
+            .into_values()
+            .map(|table| {
+                TableDTO::from(table)
+            })
+            .collect();
+        Self {
+            name: value.name,
+            location: value.location,
+            tables,
+        }
     }
 }
 
