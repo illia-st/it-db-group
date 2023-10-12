@@ -51,7 +51,7 @@ impl ValueBuilder for IntValueBuilder {
 }
 
 impl IntValue {
-    fn new(value: i64) -> Self {
+    pub fn new(value: i64) -> Self {
         Self {
             value
         }
@@ -64,6 +64,9 @@ impl IntValue {
     }
     pub fn get_type_name() -> String {
         "IntValue".to_string()
+    }
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
     }
 }
 

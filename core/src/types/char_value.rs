@@ -22,6 +22,10 @@ impl CharValue {
     pub fn get_type_name() -> String {
         "CharValue".to_string()
     }
+
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
+    }
 }
 
 impl CellValue for CharValue {

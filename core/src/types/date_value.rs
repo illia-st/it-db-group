@@ -11,7 +11,7 @@ pub struct DateValue {
     value: DateTime<Utc>,
 }
 impl DateValue {
-    fn new(value: DateTime<Utc>) -> Self {
+    pub fn new(value: DateTime<Utc>) -> Self {
         Self { value }
     }
     pub fn builder() -> CharValueBuilder {
@@ -22,6 +22,9 @@ impl DateValue {
     }
     pub fn get_type_name() -> String {
         "DateValue".to_string()
+    }
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
     }
 }
 

@@ -52,7 +52,7 @@ impl ValueBuilder for RealValueBuilder {
 }
 
 impl RealValue {
-    fn new(value: f64) -> Self {
+    pub fn new(value: f64) -> Self {
         Self { value }
     }
     pub fn builder() -> RealValueBuilder {
@@ -64,6 +64,9 @@ impl RealValue {
 
     pub fn get_type_name() -> String {
         "RealValue".to_string()
+    }
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
     }
 }
 

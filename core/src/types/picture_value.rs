@@ -55,7 +55,7 @@ impl ValueBuilder for PictureValueBuilder {
 }
 
 impl PictureValue {
-    fn new(value: DynamicImage) -> Self {
+    pub fn new(value: DynamicImage) -> Self {
         Self { value }
     }
     pub fn builder() -> PictureValueBuilder {
@@ -66,6 +66,9 @@ impl PictureValue {
     }
     pub fn get_type_name() -> String {
         "PictureValue".to_string()
+    }
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
     }
 }
 

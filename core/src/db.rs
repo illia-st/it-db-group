@@ -10,7 +10,7 @@ pub struct Database {
 }
 
 impl Database {
-    fn new(name: String, location: String) -> Self {
+    pub fn new(name: String, location: String) -> Self {
         Self {
             name,
             location,
@@ -32,6 +32,10 @@ impl Database {
     }
     pub fn get_tables_mut(&self) -> RefMut<HashMap<String, Table>> {
         self.tables.borrow_mut()
+    }
+
+    pub fn set_tables(&self, tables: HashMap<String, Table>) {
+        *self.tables.borrow_mut() = tables;
     }
 }
 #[derive(Default)]

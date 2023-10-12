@@ -45,7 +45,7 @@ impl ValueBuilder for StringValueBuilder {
 }
 
 impl StringValue {
-    fn new(value: String) -> Self {
+    pub fn new(value: String) -> Self {
         Self { value }
     }
     pub fn builder() -> StringValueBuilder {
@@ -54,6 +54,9 @@ impl StringValue {
     pub fn get_value(&self) -> &str { self.value.as_str() }
     pub fn get_type_name() -> String {
         "StringValue".to_string()
+    }
+    pub fn get_type(&self) -> String {
+        Self::get_type_name()
     }
 }
 
