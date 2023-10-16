@@ -20,6 +20,26 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                 app.quit()
             }
         },
+        KeyCode::Char('w') => {
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_priv_row()
+            }
+        },
+        KeyCode::Char('s') => {
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_next_row()
+            }
+        },
+        KeyCode::Char('a') => {
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_priv_column()
+            }
+        },
+        KeyCode::Char('d') => {
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_next_column()
+            }
+        },
         KeyCode::Char('/') => {
             if let DatabaseState::Closed(ClosedDatabaseAppState::None) = app.get_database_state() {
                 app.activete_closed_database_hood();
@@ -83,9 +103,21 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                             );
                         }
                     },
+                    Some(("delete", args)) => {
+                        if args.get_flag("table") {
+                            app.opening_database_error("Trying to delete a table. But no database is active".to_owned());
+                        }
+                        if args.get_flag("database") {
+                            app.delete_database(
+                                args.get_one::<String>("database_path").unwrap().to_owned(),
+                                args.get_one::<String>("name").unwrap().to_owned(),
+                            );
+                        }
+                    },
                     Some(("open", args)) => {
                         app.open_database(
-                            args.get_one::<String>("database_path").unwrap().to_owned()
+                            args.get_one::<String>("database_path").unwrap().to_owned(),
+                            args.get_one::<String>("database_name").unwrap().to_owned()
                         );
                     },
                     _ => {
@@ -98,6 +130,16 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
 
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood(_)) = app.get_database_state() {
                 let words = shellwords::split(&app.get_buffer());
+
+                match words {
+                    Ok(_) => {},
+                    Err(e) => {
+                        app.opened_database_error(format!("{}", e));
+                        app.clear_buffer();
+                        return;
+                    },
+                }
+
                 let matches = get_parser().try_get_matches_from_mut(words.unwrap());
 
                 match matches {
@@ -128,6 +170,19 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                             args.get_one::<String>("row_value").unwrap().to_owned(),
                         );
                     }
+                    Some(("delete", args)) => {
+                        if args.get_flag("table") {
+                            app.delete_table(
+                                args.get_one::<String>("name").unwrap().to_owned(),
+                            );
+                        }
+                        if args.get_flag("database") {
+                            app.opened_database_error("Trying to delete a database. But this database is active".to_owned());
+                        }
+                    },
+                    Some(("close", args)) => {
+                        app.close_database(args.get_flag("save"))
+                    },
                     _ => {
                         app.opened_database_error("Unsupported comand for this hood".to_owned());
                     },

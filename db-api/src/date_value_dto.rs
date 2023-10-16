@@ -36,8 +36,9 @@ impl DateValueDTO {
         binary_user_reader.step_in().unwrap();
 
         binary_user_reader.next().unwrap();
-        let ans = binary_user_reader.read_string().unwrap().to_string();
-        let value = DateValue::new(NaiveDateTime::parse_from_str(ans.as_str(), "%b %d, %Y %H:%M:%S.%f %Z").unwrap().and_utc());
+        let binding = binary_user_reader.read_string().unwrap();
+        let ans = binding.text();
+        let value = DateValue::new(NaiveDateTime::parse_from_str(ans, "%b %d, %Y %H:%M:%S.%f %Z").unwrap().and_utc());
         DateValueDTO::new(value)
     }
 }
