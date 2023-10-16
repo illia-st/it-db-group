@@ -34,7 +34,7 @@ impl Table
 
     pub fn erase(&self, index: u64) -> Result<(), String> {
         let mut borrows_rows = self.rows.borrow_mut();
-        if borrows_rows.len() as u64 >= index {
+        if index > borrows_rows.len() as u64 {
             return Err(format!(
                 "index is bigger that actual table size. Table - {}, size - {}, requested index - {}",
                 self.name.as_str(),

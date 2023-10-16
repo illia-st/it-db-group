@@ -102,6 +102,10 @@ pub fn get_parser() -> Command {
                             .short('n')
                             .required(true)
                             .action(ArgAction::Set),
+                        Arg::new("row_index")
+                            .short('i')
+                            .required(true)
+                            .action(ArgAction::Set),
                     ]),
 
                 Command::new("rename")

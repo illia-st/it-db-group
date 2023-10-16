@@ -46,9 +46,7 @@ pub struct App {
 
     displayed_table: usize,
     selected_table: usize,
-    displayed_row: usize,
     selected_row: usize,
-    displayed_column: usize,
     selected_column: usize
 }
 
@@ -275,6 +273,27 @@ impl App {
 
     pub fn add_row(&mut self, table_name: String, raw_values: String) {
         let result = self.database_manager.add_row(&table_name, &raw_values);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
+    pub fn delete_row(&mut self, table_name: String, raw_index_value: String) {
+        let parsing_result = raw_index_value.parse::<u64>();
+        match &parsing_result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e.to_string());
+            },
+        }
+
+        let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
         match result {
             Ok(_) => {
                 self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
