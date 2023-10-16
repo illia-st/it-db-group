@@ -245,10 +245,67 @@ impl DatabaseManager {
             Ok(rhs) => rhs,
             Err(err) => return Err(err)
         };
-        let lhs_rows = lhs.get_rows();
-        let rhs_rows = rhs.get_rows();
-        if lhs_rows.len() != rhs_rows.len() {
-            return Err("different number of columns".to_string());
+        let mut lhs_rows = lhs.rows.borrow_mut();
+        let mut rhs_rows = rhs.rows.borrow_mut();
+
+        let mut lhs_columns = lhs.scheme.get_columns();
+        let mut rhs_columns = rhs.scheme.get_columns();
+
+        // 1) check if such column exist in columns, check it's type
+        // meanwhile need to save columns with the same names and check the type of it
+        // TODO: think of type checker
+        // 2) if everything is fine - go further
+        let mut scheme = Scheme::<dyn CellValue>::new(
+            lhs.scheme.get_types(),
+            lhs.scheme.get_columns(),
+            lhs.scheme.get_validators().to_owned(),
+        );
+        let mut column_here = false;
+        let mut column_index_l = 0;
+        let mut column_index_r = 0;
+        for (rhs_index, rhs_column) in rhs_columns.iter_mut().enumerate() {
+            for (lhs_index, lhs_column) in lhs_columns.iter_mut().enumerate() {
+                if rhs_column == lhs_column
+                    && rhs.scheme.types[rhs_index] == scheme.types[lhs_index]
+                    && rhs_column == column
+                {
+                    column_here = true;
+                    column_index_l = lhs_index;
+                    column_index_r = rhs_index;
+                } else if rhs_column == lhs_column
+                    && rhs.scheme.types[rhs_index] == scheme.types[lhs_index]
+                {
+                    rhs_column.insert_str(rhs_column.len(), "_rhs");
+                    lhs_column.insert_str(lhs_column.len(), "_lhs");
+                }
+                if rhs_column != lhs_column {
+                    scheme.columns.push(rhs_column.to_string());
+                    scheme.types.push(rhs.scheme.get_types()[rhs_index].to_string());
+                    scheme.value_generators.push(rhs.scheme.get_validators()[rhs_index].to_owned());
+                }
+            }
+        }
+        if !column_here {
+            return Err(format!("Column wasn't found or found with different types: {}", column));
+        }
+        scheme.columns = lhs_columns;
+        let mut ans_rows = lhs_rows.clone();
+        for rhs_row in rhs_rows.iter_mut() {
+            for (lhs_index, lhs_row) in lhs_rows.iter_mut().enumerate() {
+                if rhs_row.get_values()[column_index_r].get_value() == lhs_row.get_values()[column_index_l].get_value() {
+                    // have found same values
+                    rhs_row.values.iter_mut().enumerate().for_each(|(index, value)| {
+                        if index == column_index_r {
+                            return;
+                        }
+                        // ans_rows[lhs_index].push_value(value.clone());
+                    });
+                } else {
+                    let mut helper = rhs_row.get_values().to_vec();
+                    ans_rows.push(todo!("push rhs row with adjusted indexes and column"));
+                }
+            }
+            // iterate rhs_rows
         }
 
         let mut ans = lhs_rows.clone();

@@ -7,7 +7,7 @@ pub struct Row<T>
 where
     T: CellValue + ?Sized + Debug
 {
-    values: Vec<Rc<T>>,
+    pub values: Vec<Rc<T>>,
 }
 
 impl<T> Row<T>
@@ -19,6 +19,10 @@ where
     }
     pub fn get_values(&self) -> &[Rc<T>] {
         self.values.as_slice()
+    }
+
+    pub fn push_value(&mut self, value: Rc<T>) {
+        self.values.push(value);
     }
 }
 
