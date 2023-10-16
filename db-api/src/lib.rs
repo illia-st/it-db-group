@@ -15,4 +15,5 @@ pub mod char_value_dto;
 pub mod string_value_dto;
 pub mod picture_value_dto;
 pub mod date_value_dto;
+pub mod email_value_dto;
 pub mod scheme_dto;

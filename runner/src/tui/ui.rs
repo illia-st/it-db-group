@@ -175,8 +175,8 @@ fn render_active_table(f: &mut Frame, layout: Rect, color: Color, table_result: 
                         date.get_value().to_string()
                     },
                     core::types::ValueType::Email(email) => {
-                        email.get_value().as_str().to_owned()
-                    },
+                        email.get_value().to_string()
+                    }
                 };
             
             let mut cell = Cell::from(cell_content);

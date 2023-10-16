@@ -18,6 +18,7 @@ use crate::date_value_dto::DateValueDTO;
 
 use crate::Encoder;
 use crate::Decoder;
+use crate::email_value_dto::EmailValueDTO;
 use crate::envelope::Envelope;
 use crate::int_value_dto::IntValueDTO;
 use crate::picture_value_dto::PictureValueDTO;
@@ -59,7 +60,10 @@ impl From<Rc<Row<dyn CellValue>>> for RowDTO {
                     let ty = v.get_type();
                     Envelope::new(ty.as_str(), DateValueDTO::new(v).encode().as_slice())
                 }
-                ValueType::Email(_v) => todo!(),
+                ValueType::Email(v) => {
+                    let ty = v.get_type();
+                    Envelope::new(ty.as_str(), EmailValueDTO::new(v).encode().as_slice())
+                }
             };
             values.push(wrapper);
         });

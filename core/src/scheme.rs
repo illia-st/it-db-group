@@ -8,10 +8,10 @@ pub struct Scheme<T>
 where
     T: CellValue + ?Sized,
 {
-    types: Vec<String>,
-    value_generators: Vec<Arc<fn(String) -> Result<Rc<T>, String>>>,
+    pub types: Vec<String>,
+    pub value_generators: Vec<Arc<fn(String) -> Result<Rc<T>, String>>>,
     // TODO: add columns name
-    columns: Vec<String>,
+    pub columns: Vec<String>,
 }
 impl<T> Clone for Scheme<T>
 where

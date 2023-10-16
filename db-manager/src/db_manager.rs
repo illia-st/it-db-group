@@ -163,6 +163,21 @@ impl DatabaseManager {
         };
         res
     }
+
+    pub fn add_row_to_the_table(table: &Table, raw_values: Vec<String>){
+        let scheme = table.get_scheme();
+
+        let mut row_values = Vec::default();
+        for (generator, raw_value) in scheme.get_validators().iter().zip(raw_values) {
+            match generator(raw_value) {
+                Ok(value) => row_values.push(value),
+                Err(_) => panic!()
+            }
+        }
+        let new_row = Row::new(row_values);
+        table.add_row(new_row);
+    }
+
     pub fn delete_row(&self, table_name: &str, index: u64) -> Result<(), String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
@@ -242,7 +257,7 @@ impl DatabaseManager {
         self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect::<Vec<String>>()
     }
 
-    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, _column: &str) -> Result<Table, String> {
+    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, column: &str) -> Result<Table, String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
         }
@@ -254,34 +269,303 @@ impl DatabaseManager {
             Ok(rhs) => rhs,
             Err(err) => return Err(err)
         };
-        let lhs_rows = lhs.get_rows();
-        let rhs_rows = rhs.get_rows();
-        if lhs_rows.len() != rhs_rows.len() {
-            return Err("different number of columns".to_string());
+        
+        let lhs_columns = lhs.scheme.get_columns();
+        let rhs_columns = rhs.scheme.get_columns();
+        if !lhs_columns.contains(&column.to_owned()) || !rhs_columns.contains(&column.to_owned()) {
+            return Err("There is no such column in at least one of the tables".to_string())
+        }
+        for lhs_column in &lhs_columns {
+            if lhs_column != column && rhs_columns.contains(&lhs_column) {
+                return Err("There are some other columns, that have equal names".to_string());
+            }
         }
 
-        let mut ans = lhs_rows.clone();
-        for rhs_row in rhs_rows.iter() {
-            let mut flag = false;
-            for lhs_row in lhs_rows.iter() {
-                let lhs_row_values = lhs_row.get_values();
-                for (index, value) in lhs_row.get_values().iter().enumerate() {
-                    if lhs_row_values[index].as_ref().get_value() == value.as_ref().get_value() {
-                        flag = true;
-                    }
-                }
-            }
-            if !flag {
-                ans.push(rhs_row.clone());
+        let lhs_column_index = lhs.get_scheme().get_columns().iter().position(|n| n == column).unwrap();
+        let rhs_column_index = rhs.get_scheme().get_columns().iter().position(|n| n == column).unwrap();
+
+        let lhs_range = 0..lhs.get_scheme().get_columns().len();
+        let rhs_range = 0..rhs.get_scheme().get_columns().len();
+
+        let lhs_scheme = lhs.get_scheme();
+        let rhs_scheme = rhs.get_scheme();
+
+        let mut join_types = Vec::new();
+        let mut join_columns = Vec::new();
+        let mut join_generators = Vec::new();
+
+        join_types.push(lhs_scheme.get_types()[lhs_column_index].clone());
+        join_columns.push(lhs_scheme.get_columns()[lhs_column_index].clone());
+        join_generators.push(lhs_scheme.get_validators()[lhs_column_index].clone());
+
+        for i in lhs_range.clone() {
+            if i != lhs_column_index {
+                join_types.push("StringValue".to_owned());
+                join_columns.push(lhs_scheme.get_columns()[i].clone());
+                join_generators.push(self.supported_types.get("StringValue").unwrap().clone());
             }
         }
-        let res = Table::builder()
-            .with_scheme(lhs.get_scheme().clone())
-            .with_name("Join".to_string())
-            .build()
-            .unwrap();
-        res.set_rows(ans);
-        Ok(res)
+
+        for i in rhs_range.clone() {
+            if i != rhs_column_index {
+                join_types.push("StringValue".to_owned());
+                join_columns.push(rhs_scheme.get_columns()[i].clone());
+                join_generators.push(self.supported_types.get("StringValue").unwrap().clone());
+            }
+        }
+
+        let join_scheme = Scheme::new(join_types, join_columns, join_generators);
+
+        let join_table = match Table::builder()
+        .with_name("join_table".to_string())
+        .with_scheme(join_scheme)
+        .build() {
+            Ok(table) => table,
+            Err(err) => return Err(err)
+        };
+        
+        let mut lhs_core_column_values: Vec<String> = Vec::new();
+        for i in 0..lhs.get_rows().len() {
+            let cell_value = lhs.get_rows().get(i).unwrap().get_values().get(lhs_column_index).unwrap().clone();
+
+            lhs_core_column_values.push(
+                match cell_value.get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                }
+            )
+        }
+        let mut core_lhs_column_values_copy = lhs_core_column_values.clone();
+        let lhs_len = core_lhs_column_values_copy.len();
+        core_lhs_column_values_copy.sort();
+        core_lhs_column_values_copy.dedup();
+        if lhs_len != core_lhs_column_values_copy.len() {
+            return Err("The table column is not consist from unique values".to_owned());
+        }
+
+        let mut rhs_core_column_values: Vec<String> = Vec::new();
+        for i in 0..rhs.get_rows().len() {
+            let cell_value = rhs.get_rows().get(i).unwrap().get_values().get(rhs_column_index).unwrap().clone();
+            
+            rhs_core_column_values.push(
+                match cell_value.get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                }
+            )
+        }
+        let mut core_rhs_column_values_copy = rhs_core_column_values.clone();
+        let rhs_len = core_rhs_column_values_copy.len();
+        core_rhs_column_values_copy.sort();
+        core_rhs_column_values_copy.dedup();
+        if rhs_len != core_rhs_column_values_copy.len() {
+            return Err("The table column is not consist from unique values".to_owned());
+        }
+
+        let mut core_column_values: Vec<String> = Vec::new();
+        for value in lhs_core_column_values {
+            core_column_values.push(value);
+        }
+        for value in rhs_core_column_values {
+            core_column_values.push(value);
+        }
+        core_column_values.sort();
+        core_column_values.dedup();
+
+        for core_column_value in core_column_values {
+            let mut row_values: Vec<String> = Vec::new();
+            row_values.push(core_column_value.clone());
+
+            let mut lhs_row_index: Option<usize> = None;
+            for index in 0..lhs.get_rows().len() {
+                let column_index_value = match lhs.get_rows().get(index).unwrap().get_values().get(lhs_column_index).unwrap().get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                };
+                if core_column_value == column_index_value {
+                    lhs_row_index = Some(index);
+                    break;
+                }
+            }
+            let mut rhs_row_index: Option<usize> = None;
+            for index in 0..rhs.get_rows().len() {
+                let column_index_value = match rhs.get_rows().get(index).unwrap().get_values().get(rhs_column_index).unwrap().get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                };
+                if core_column_value == column_index_value {
+                    rhs_row_index = Some(index);
+                    break;
+                }
+            }
+
+            match lhs_row_index {
+                Some(index) => {
+                    let lhs_row = lhs.get_rows().get(index).unwrap().clone();
+                    for lhs_cell_index in 0..lhs_row.get_values().len() {
+                        if lhs_cell_index == lhs_column_index {
+                            continue;
+                        }
+                        row_values.push(
+                            match lhs_row.get_values().get(lhs_cell_index).unwrap().get_value() {
+                                core::types::ValueType::Int(int) => {
+                                    int.get_value().to_string()
+                                },
+                                core::types::ValueType::Str(str) => {
+                                    str.get_value().to_owned()
+                                },
+                                core::types::ValueType::Real(real) => {
+                                    real.get_value().to_string()
+                                },
+                                core::types::ValueType::Pic(_picture) => {
+                                    "picture".to_owned()
+                                },
+                                core::types::ValueType::Char(char) => {
+                                    char.get_value().to_string()
+                                },
+                                core::types::ValueType::Date(date) => {
+                                    date.get_value().to_string()
+                                },
+                                core::types::ValueType::Email(email) => {
+                                    email.get_value().to_string()
+                                }
+                            }
+                        )
+                    }
+                }
+                None => {
+                    for index in lhs_range.clone() {
+                        if index == lhs_column_index {
+                            continue;
+                        }
+                        row_values.push("##NONE##".to_owned())
+                    }
+                },
+            }
+            match rhs_row_index {
+                Some(index) => {
+                    let rhs_row = rhs.get_rows().get(index).unwrap().clone();
+                    for rhs_cell_index in 0..rhs_row.get_values().len() {
+                        if rhs_cell_index == rhs_column_index {
+                            continue;
+                        }
+                        row_values.push(
+                            match rhs_row.get_values().get(rhs_cell_index).unwrap().get_value() {
+                                core::types::ValueType::Int(int) => {
+                                    int.get_value().to_string()
+                                },
+                                core::types::ValueType::Str(str) => {
+                                    str.get_value().to_owned()
+                                },
+                                core::types::ValueType::Real(real) => {
+                                    real.get_value().to_string()
+                                },
+                                core::types::ValueType::Pic(_picture) => {
+                                    "picture".to_owned()
+                                },
+                                core::types::ValueType::Char(char) => {
+                                    char.get_value().to_string()
+                                },
+                                core::types::ValueType::Date(date) => {
+                                    date.get_value().to_string()
+                                },
+                                core::types::ValueType::Email(email) => {
+                                    email.get_value().to_string()
+                                }
+                            }
+                        )
+                    }
+                }
+                None => {
+                    for index in rhs_range.clone() {
+                        if index == rhs_column_index {
+                            continue;
+                        }
+                        row_values.push("##NONE##".to_owned())
+                    }
+                },
+            }
+
+            Self::add_row_to_the_table(&join_table, row_values);
+        }
+        
+        Ok(join_table)
     }
 
     pub fn rename(&self, table_name: &str, new_columns_names: Vec<String>) -> Result<(), String> {
