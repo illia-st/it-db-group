@@ -169,6 +169,9 @@ fn render_active_table(f: &mut Frame, layout: Rect, color: Color, table_result: 
                     core::types::ValueType::Date(date) => {
                         date.get_value().to_string()
                     },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
                 };
             row_content.push(cell_content);
         }
