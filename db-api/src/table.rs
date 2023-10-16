@@ -91,25 +91,25 @@ impl TableDTO {
         binary_user_reader.step_in().unwrap();
 
         binary_user_reader.next().unwrap();
-        let name = binary_user_reader.read_string().unwrap().to_string();
+        let binding = binary_user_reader.read_string().unwrap();
+        let name = binding.text();
 
         binary_user_reader.next().unwrap();
         let scheme = SchemeDTO::decode(binary_user_reader.read_blob().unwrap().as_slice().to_vec());
 
         binary_user_reader.next().unwrap();
-
+        binary_user_reader.step_in().unwrap();
         let elements = binary_user_reader.read_all_elements().unwrap();
         let mut rows = Vec::<RowDTO>::with_capacity(elements.capacity());
         for element in elements {
             let data = element.as_blob().unwrap();
             rows.push(RowDTO::decode(data.to_vec()));
         }
-        binary_user_reader.step_out().unwrap();
 
         binary_user_reader.step_out().unwrap();
 
         Self {
-            name,
+            name: name.to_owned(),
             scheme,
             rows,
         }

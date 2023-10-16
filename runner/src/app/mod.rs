@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use db_manager::db_manager::DatabaseManager;
-use core;
+use core::{self, table::Table};
 
 pub enum Action {
     Tick,
@@ -33,6 +33,7 @@ pub enum OpenedDatabaseAppState {
     ActiveHood(String),
     ActiveMenu,
     ActiveTable,
+    ActiveJoinResult,
     #[default]
     None
 }
@@ -43,8 +44,13 @@ pub struct App {
     database_state: DatabaseState,
     buffer: String,
     database_manager: DatabaseManager,
+
     displayed_table: usize,
-    selected_table: usize
+    selected_table: usize,
+    selected_row: usize,
+    selected_column: usize,
+
+    join_result: Option<Table>
 }
 
 impl App {
@@ -76,8 +82,8 @@ impl App {
             },
         }
     }
-    pub fn open_database(&mut self, database_path: String) {
-        let result = self.database_manager.read_db_from_directory(&database_path);
+    pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
+        let result = self.database_manager.read_db_from_directory(&database_dir_path, &database_name);
         match result {
             Ok(_) => {
                 self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
@@ -89,6 +95,17 @@ impl App {
     }
     pub fn close_database(&mut self, need_to_save: bool) {
         let result = self.database_manager.close_db(need_to_save);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opening_database_error(e);
+            },
+        }
+    }
+    pub fn delete_database(&mut self, database_dir_path: String, database_name: String) {
+        let result = self.database_manager.delete_db(&database_dir_path, &database_name);
         match result {
             Ok(_) => {
                 self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
@@ -125,10 +142,14 @@ impl App {
         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
     }
     pub fn activete_opened_database_hood(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood("".to_owned()))
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood("".to_owned()));
+        self.reset_column();
+        self.reset_row();
     }
     pub fn deactivete_opened_database_hood(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None);
+        self.reset_column();
+        self.reset_row();
     }
     pub fn opening_database_error(&mut self, error: String) {
         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::ActiveHood(error));
@@ -136,14 +157,21 @@ impl App {
     }
     pub fn opened_database_error(&mut self, error: String) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood(error));
+        self.reset_column();
+        self.reset_row();
         self.clear_buffer();
     }
 
     pub fn activete_opened_database_active_menu(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveMenu)
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveMenu);
+        self.reset_column();
+        self.reset_row();
     }
     pub fn activete_opened_database_active_table(&mut self) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable)
+    }
+    pub fn activete_opened_database_active_join_result(&mut self) {
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
     }
 
     pub fn release_buffer(&mut self) -> String {
@@ -171,6 +199,11 @@ impl App {
         self.get_table_list().len()
     }
 
+    ///////////////////////////
+    //START SELECTION SECTION//
+    ///////////////////////////
+    
+    //Selected table
     pub fn selsect_next_table(&mut self) {
         if let Some(res) = self.selected_table.checked_add(1) {
             if res < self.get_table_count() {
@@ -191,6 +224,51 @@ impl App {
         self.displayed_table = self.selected_table
     }
 
+    //Selected cell row
+    pub fn selsect_next_row(&mut self) {
+        if let Some(res) = self.selected_row.checked_add(1) {
+            if res < self.get_current_table().unwrap().get_rows().len() {
+                self.selected_row = res;
+            }
+        }
+    }
+    pub fn selsect_priv_row(&mut self) {
+        if let Some(res) = self.selected_row.checked_sub(1) {
+            self.selected_row = res;
+        }
+    }
+    pub fn reset_row(&mut self) {
+        self.selected_row = 0;
+    }
+    pub fn get_selected_row_index(&self) -> usize {
+        self.selected_row
+    }
+
+    //Selected cell column
+    pub fn selsect_next_column(&mut self) {
+        if let Some(res) = self.selected_column.checked_add(1) {
+            if res < self.get_current_table().unwrap().get_columns().len() {
+                self.selected_column = res;
+            }
+        }
+    }
+    pub fn selsect_priv_column(&mut self) {
+        if let Some(res) = self.selected_column.checked_sub(1) {
+            self.selected_column = res;
+        }
+    }
+    pub fn reset_column(&mut self) {
+        self.selected_column = 0;
+    }
+    pub fn get_selected_column_index(&self) -> usize {
+        self.selected_column
+    }
+
+    /////////////////////////
+    //END SELECTION SECTION//
+    /////////////////////////
+
+
     pub fn get_current_table(&self) -> Result<core::table::Table, String> {
         if self.get_table_count() > 0 {
             Ok(self.database_manager.get_table(&self.get_table_list()[self.displayed_table]).unwrap())
@@ -210,8 +288,71 @@ impl App {
             },
         }
     }
+    pub fn delete_row(&mut self, table_name: String, raw_index_value: String) {
+        let parsing_result = raw_index_value.parse::<u64>();
+        match &parsing_result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e.to_string());
+            },
+        }
+
+        let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
     
     pub fn get_database_name(&self) -> String {
         self.database_manager.get_database_name()
+    }
+
+    pub fn delete_table(&mut self, table_name: String) {
+        let result = self.database_manager.delete_table(&table_name);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
+
+    pub fn get_join_result(&mut self, lhs_table_name: String, rhs_table_name: String, column: String) {
+        let result = self.database_manager.join(&lhs_table_name, &rhs_table_name, &column);
+        match result {
+            Ok(_) => {
+                self.join_result = Some(result.unwrap());
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
+
+    pub fn get_join_result_table(&self) -> Result<core::table::Table, String> {
+        Ok(self.join_result.clone().unwrap())
+    }
+
+    pub fn rename_row(&mut self, table_name: String, columns: String) {
+        let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
+        let result = self.database_manager.rename(&table_name, column_names);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
 }

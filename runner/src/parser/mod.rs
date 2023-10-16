@@ -52,10 +52,9 @@ pub fn get_parser() -> Command {
                             .required_unless_present("database")
                             .action(ArgAction::SetTrue),
 
-                        Arg::new("table_name")
+                        Arg::new("name")
                             .short('n')
-                            .conflicts_with("database")
-                            .required_unless_present("database")
+                            .required(true)
                             .action(ArgAction::Set),
                         
                         Arg::new("database_path")
@@ -70,7 +69,11 @@ pub fn get_parser() -> Command {
                         Arg::new("database_path")
                             .short('p')
                             .required(true)
-                            .action(ArgAction::Set)
+                            .action(ArgAction::Set),
+                        Arg::new("database_name")
+                            .short('n')
+                            .required(true)
+                            .action(ArgAction::Set),
                     ]),
 
                 Command::new("close")
@@ -97,6 +100,10 @@ pub fn get_parser() -> Command {
                     .args([
                         Arg::new("table_name")
                             .short('n')
+                            .required(true)
+                            .action(ArgAction::Set),
+                        Arg::new("row_index")
+                            .short('i')
                             .required(true)
                             .action(ArgAction::Set),
                     ]),
@@ -141,16 +148,22 @@ mod tests {
         let mut command = get_parser();
         
         let args = vec!["database", "create", "-t"];
-        assert!(command.try_get_matches_from_mut(args).is_err());
+        assert!(command.try_get_matches_from_mut(&args).is_err());
         let args = vec!["database", "create", "-t", "-n", "\"\"", "-c", "\"\"", "-v", "\"\""];
-        assert!(command.try_get_matches_from_mut(args).is_ok());
+        assert!(command.try_get_matches_from_mut(&args).is_ok());
         let args = vec!["database", "create", "-d", "-n", "\"\"", "-p", "\"\""];
-        assert!(command.try_get_matches_from_mut(args).is_ok());
+        assert!(command.try_get_matches_from_mut(&args).is_ok());
         let args = vec!["database", "close"];
-        assert!(command.try_get_matches_from_mut(args).is_ok());
+        assert!(command.try_get_matches_from_mut(&args).is_ok());
+        match command.try_get_matches_from_mut(args).unwrap().subcommand() {
+            Some(("close", arg)) => {
+                assert!(!arg.get_flag("save"))
+            },
+            _ => todo!(),
+        }
         let args = vec!["database", "close", "-s"];
-        assert!(command.try_get_matches_from_mut(args).is_ok());
+        assert!(command.try_get_matches_from_mut(&args).is_ok());
         let args = vec!["database", "close", "-s", "\"\""];
-        assert!(command.try_get_matches_from_mut(args).is_err());
+        assert!(command.try_get_matches_from_mut(&args).is_err());
     }   
 }

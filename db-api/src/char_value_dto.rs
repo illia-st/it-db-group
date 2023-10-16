@@ -37,9 +37,10 @@ impl CharValueDTO {
         binary_user_reader.step_in().unwrap();
 
         binary_user_reader.next().unwrap();
-        let ans = binary_user_reader.read_string().unwrap().to_string();
+        let binding = binary_user_reader.read_string().unwrap();
+        let ans = binding.text();
         let value = CharValue::builder()
-            .with_raw_value(ans)
+            .with_raw_value(ans.to_owned())
             .build()
             .unwrap();
         CharValueDTO::new(value)

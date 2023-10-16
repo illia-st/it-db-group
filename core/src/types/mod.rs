@@ -31,10 +31,12 @@ lazy_static! {
     pub static ref SUPPORTED_TYPES: HashMap<String, Arc<fn(String) -> Result<Rc<dyn CellValue>, String>>> = {
         let mut supported_types = HashMap::new();
         supported_types.insert(IntValue::get_type_name(), crate::types::int_value::get_value_generator());
-        supported_types.insert(IntValue::get_type_name(), crate::types::char_value::get_value_generator());
+        supported_types.insert(CharValue::get_type_name(), crate::types::char_value::get_value_generator());
         supported_types.insert(PictureValue::get_type_name(), crate::types::picture_value::get_value_generator());
         supported_types.insert(RealValue::get_type_name(), crate::types::real_value::get_value_generator());
         supported_types.insert(StringValue::get_type_name(), crate::types::string_value::get_value_generator());
+        supported_types.insert(DateValue::get_type_name(), crate::types::date_value::get_value_generator());
+        supported_types.insert(EmailValue::get_type_name(), crate::types::email_value::get_value_generator());
         supported_types
     };
 }
