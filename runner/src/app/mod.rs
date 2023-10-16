@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use db_manager::db_manager::DatabaseManager;
-use core;
+use core::{self, table::Table};
 
 pub enum Action {
     Tick,
@@ -33,6 +33,7 @@ pub enum OpenedDatabaseAppState {
     ActiveHood(String),
     ActiveMenu,
     ActiveTable,
+    ActiveJoinResult,
     #[default]
     None
 }
@@ -47,7 +48,9 @@ pub struct App {
     displayed_table: usize,
     selected_table: usize,
     selected_row: usize,
-    selected_column: usize
+    selected_column: usize,
+
+    join_result: Option<Table>
 }
 
 impl App {
@@ -166,6 +169,9 @@ impl App {
     }
     pub fn activete_opened_database_active_table(&mut self) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable)
+    }
+    pub fn activete_opened_database_active_join_result(&mut self) {
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
     }
 
     pub fn release_buffer(&mut self) -> String {
@@ -310,6 +316,36 @@ impl App {
 
     pub fn delete_table(&mut self, table_name: String) {
         let result = self.database_manager.delete_table(&table_name);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
+
+    pub fn get_join_result(&mut self, lhs_table_name: String, rhs_table_name: String, column: String) {
+        let result = self.database_manager.join(&lhs_table_name, &rhs_table_name, &column);
+        match result {
+            Ok(_) => {
+                self.join_result = Some(result.unwrap());
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
+    }
+
+    pub fn get_join_result_table(&self) -> Result<core::table::Table, String> {
+        Ok(self.join_result.clone().unwrap())
+    }
+
+    pub fn rename_row(&mut self, table_name: String, columns: String) {
+        let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
+        let result = self.database_manager.rename(&table_name, column_names);
         match result {
             Ok(_) => {
                 self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
