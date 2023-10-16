@@ -3,7 +3,7 @@ use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use crate::row::Row;
 use crate::scheme::Scheme;
-use crate::types::{CellValue, email_value};
+use crate::types::{CellValue};
 
 #[derive(Clone, Debug)]
 pub struct Table {
