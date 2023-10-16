@@ -257,7 +257,7 @@ impl DatabaseManager {
         self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect::<Vec<String>>()
     }
 
-    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, _column: &str) -> Result<Table, String> {
+    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, column: &str) -> Result<Table, String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
         }
@@ -412,17 +412,78 @@ impl DatabaseManager {
 
         for core_column_value in core_column_values {
             let mut row_values: Vec<String> = Vec::new();
-            row_values.push(core_column_value);
+            row_values.push(core_column_value.clone());
 
-            let lhs_row_index: Option<usize> = None;
-            let rhs_row_index: Option<usize> = None;
+            let mut lhs_row_index: Option<usize> = None;
+            for index in 0..lhs.get_rows().len() {
+                let column_index_value = match lhs.get_rows().get(index).unwrap().get_values().get(lhs_column_index).unwrap().get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                };
+                if core_column_value == column_index_value {
+                    lhs_row_index = Some(index);
+                    break;
+                }
+            }
+            let mut rhs_row_index: Option<usize> = None;
+            for index in 0..rhs.get_rows().len() {
+                let column_index_value = match rhs.get_rows().get(index).unwrap().get_values().get(rhs_column_index).unwrap().get_value() {
+                    core::types::ValueType::Int(int) => {
+                        int.get_value().to_string()
+                    },
+                    core::types::ValueType::Str(str) => {
+                        str.get_value().to_owned()
+                    },
+                    core::types::ValueType::Real(real) => {
+                        real.get_value().to_string()
+                    },
+                    core::types::ValueType::Pic(_picture) => {
+                        "picture".to_owned()
+                    },
+                    core::types::ValueType::Char(char) => {
+                        char.get_value().to_string()
+                    },
+                    core::types::ValueType::Date(date) => {
+                        date.get_value().to_string()
+                    },
+                    core::types::ValueType::Email(email) => {
+                        email.get_value().to_string()
+                    }
+                };
+                if core_column_value == column_index_value {
+                    rhs_row_index = Some(index);
+                    break;
+                }
+            }
 
             match lhs_row_index {
                 Some(index) => {
                     let lhs_row = lhs.get_rows().get(index).unwrap().clone();
-                    for lhs_cell in lhs_row.get_values() {
+                    for lhs_cell_index in 0..lhs_row.get_values().len() {
+                        if lhs_cell_index == lhs_column_index {
+                            continue;
+                        }
                         row_values.push(
-                            match lhs_cell.get_value() {
+                            match lhs_row.get_values().get(lhs_cell_index).unwrap().get_value() {
                                 core::types::ValueType::Int(int) => {
                                     int.get_value().to_string()
                                 },
@@ -449,7 +510,10 @@ impl DatabaseManager {
                     }
                 }
                 None => {
-                    for _ in lhs_range.clone() {
+                    for index in lhs_range.clone() {
+                        if index == lhs_column_index {
+                            continue;
+                        }
                         row_values.push("##NONE##".to_owned())
                     }
                 },
@@ -457,9 +521,12 @@ impl DatabaseManager {
             match rhs_row_index {
                 Some(index) => {
                     let rhs_row = rhs.get_rows().get(index).unwrap().clone();
-                    for rhs_cell in rhs_row.get_values() {
+                    for rhs_cell_index in 0..rhs_row.get_values().len() {
+                        if rhs_cell_index == rhs_column_index {
+                            continue;
+                        }
                         row_values.push(
-                            match rhs_cell.get_value() {
+                            match rhs_row.get_values().get(rhs_cell_index).unwrap().get_value() {
                                 core::types::ValueType::Int(int) => {
                                     int.get_value().to_string()
                                 },
@@ -486,7 +553,10 @@ impl DatabaseManager {
                     }
                 }
                 None => {
-                    for _ in rhs_range.clone() {
+                    for index in rhs_range.clone() {
+                        if index == rhs_column_index {
+                            continue;
+                        }
                         row_values.push("##NONE##".to_owned())
                     }
                 },
