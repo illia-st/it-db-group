@@ -3,7 +3,7 @@ use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 use crate::row::Row;
 use crate::scheme::Scheme;
-use crate::types::{CellValue, email_value};
+use crate::types::{CellValue};
 
 #[derive(Clone, Debug)]
 pub struct Table {
@@ -34,7 +34,7 @@ impl Table
 
     pub fn erase(&self, index: u64) -> Result<(), String> {
         let mut borrows_rows = self.rows.borrow_mut();
-        if borrows_rows.len() as u64 >= index {
+        if index > borrows_rows.len() as u64 {
             return Err(format!(
                 "index is bigger that actual table size. Table - {}, size - {}, requested index - {}",
                 self.name.as_str(),

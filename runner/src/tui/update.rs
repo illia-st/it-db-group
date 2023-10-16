@@ -24,9 +24,22 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
                 app.selsect_priv_row()
             }
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
+                app.selsect_priv_row()
+            }
         },
         KeyCode::Char('s') => {
+            if key_event.modifiers == KeyModifiers::CONTROL {
+                if let DatabaseState::Opened(_) = app.get_database_state() {
+                    app.close_database(true);
+                    return;
+                }
+            }
+
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_next_row()
+            }
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
                 app.selsect_next_row()
             }
         },
@@ -34,9 +47,15 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
                 app.selsect_priv_column()
             }
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
+                app.selsect_priv_column()
+            }
         },
         KeyCode::Char('d') => {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
+                app.selsect_next_column()
+            }
+            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
                 app.selsect_next_column()
             }
         },
@@ -58,13 +77,6 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
         KeyCode::Char(']') => {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveMenu) = app.get_database_state() {
                 app.selsect_next_table()
-            }
-        }
-        KeyCode::Char('s') | KeyCode::Char('S') => {
-            if key_event.modifiers == KeyModifiers::CONTROL {
-                if let DatabaseState::Opened(_) = app.get_database_state() {
-                    app.close_database(true);
-                }
             }
         }
         KeyCode::Esc => {
@@ -182,6 +194,25 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                     },
                     Some(("close", args)) => {
                         app.close_database(args.get_flag("save"))
+                    },
+                    Some(("remove", args)) => {
+                        app.delete_row(
+                            args.get_one::<String>("table_name").unwrap().to_owned(),
+                            args.get_one::<String>("row_index").unwrap().to_owned()
+                        )
+                    },
+                    Some(("rename", args)) => {
+                        app.rename_row(
+                            args.get_one::<String>("table_name").unwrap().to_owned(),
+                            args.get_one::<String>("table_column_names").unwrap().to_owned()
+                        )
+                    },
+                    Some(("join", args)) => {
+                        app.get_join_result(
+                            args.get_one::<String>("left_table_name").unwrap().to_owned(),
+                            args.get_one::<String>("right_table_name").unwrap().to_owned(),
+                            args.get_one::<String>("column_name").unwrap().to_owned()
+                        )
                     },
                     _ => {
                         app.opened_database_error("Unsupported comand for this hood".to_owned());

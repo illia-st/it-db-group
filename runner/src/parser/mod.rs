@@ -102,6 +102,10 @@ pub fn get_parser() -> Command {
                             .short('n')
                             .required(true)
                             .action(ArgAction::Set),
+                        Arg::new("row_index")
+                            .short('i')
+                            .required(true)
+                            .action(ArgAction::Set),
                     ]),
 
                 Command::new("rename")
@@ -153,7 +157,7 @@ mod tests {
         assert!(command.try_get_matches_from_mut(&args).is_ok());
         match command.try_get_matches_from_mut(args).unwrap().subcommand() {
             Some(("close", arg)) => {
-                assert!(arg.get_flag("save") == false)
+                assert!(!arg.get_flag("save"))
             },
             _ => todo!(),
         }

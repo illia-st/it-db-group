@@ -242,7 +242,7 @@ impl DatabaseManager {
         self.database.borrow().as_ref().unwrap().get_tables().keys().cloned().collect::<Vec<String>>()
     }
 
-    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, column: &str) -> Result<Table, String> {
+    pub fn join(&self, lhs_table_name: &str, rhs_table_name: &str, _column: &str) -> Result<Table, String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
         }
