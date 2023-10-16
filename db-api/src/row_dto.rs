@@ -59,6 +59,10 @@ impl From<Rc<Row<dyn CellValue>>> for RowDTO {
                     let ty = v.get_type();
                     Envelope::new(ty.as_str(), DateValueDTO::new(v).encode().as_slice())
                 }
+                ValueType::Email(v) => {
+                    let ty = v.get_type();
+                    Envelope::new(ty.as_str(), EmailValueDTO::)
+                }
             };
             values.push(wrapper);
         });
