@@ -52,10 +52,9 @@ pub fn get_parser() -> Command {
                             .required_unless_present("database")
                             .action(ArgAction::SetTrue),
 
-                        Arg::new("table_name")
+                        Arg::new("name")
                             .short('n')
-                            .conflicts_with("database")
-                            .required_unless_present("database")
+                            .required(true)
                             .action(ArgAction::Set),
                         
                         Arg::new("database_path")

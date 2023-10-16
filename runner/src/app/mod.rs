@@ -43,8 +43,13 @@ pub struct App {
     database_state: DatabaseState,
     buffer: String,
     database_manager: DatabaseManager,
+
     displayed_table: usize,
-    selected_table: usize
+    selected_table: usize,
+    displayed_row: usize,
+    selected_row: usize,
+    displayed_column: usize,
+    selected_column: usize
 }
 
 impl App {
@@ -98,6 +103,17 @@ impl App {
             },
         }
     }
+    pub fn delete_database(&mut self, database_dir_path: String, database_name: String) {
+        let result = self.database_manager.delete_db(&database_dir_path, &database_name);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opening_database_error(e);
+            },
+        }
+    }
 
     pub fn create_table(&mut self, table_name: String, columns: String, data_types: String) {
         let column_names = columns.split_terminator(';').collect::<Vec<&str>>();
@@ -125,10 +141,14 @@ impl App {
         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
     }
     pub fn activete_opened_database_hood(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood("".to_owned()))
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood("".to_owned()));
+        self.reset_column();
+        self.reset_row();
     }
     pub fn deactivete_opened_database_hood(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None);
+        self.reset_column();
+        self.reset_row();
     }
     pub fn opening_database_error(&mut self, error: String) {
         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::ActiveHood(error));
@@ -136,11 +156,15 @@ impl App {
     }
     pub fn opened_database_error(&mut self, error: String) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveHood(error));
+        self.reset_column();
+        self.reset_row();
         self.clear_buffer();
     }
 
     pub fn activete_opened_database_active_menu(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveMenu)
+        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveMenu);
+        self.reset_column();
+        self.reset_row();
     }
     pub fn activete_opened_database_active_table(&mut self) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable)
@@ -171,6 +195,11 @@ impl App {
         self.get_table_list().len()
     }
 
+    ///////////////////////////
+    //START SELECTION SECTION//
+    ///////////////////////////
+    
+    //Selected table
     pub fn selsect_next_table(&mut self) {
         if let Some(res) = self.selected_table.checked_add(1) {
             if res < self.get_table_count() {
@@ -190,6 +219,51 @@ impl App {
     pub fn show_table(&mut self) {
         self.displayed_table = self.selected_table
     }
+
+    //Selected cell row
+    pub fn selsect_next_row(&mut self) {
+        if let Some(res) = self.selected_row.checked_add(1) {
+            if res < self.get_current_table().unwrap().get_rows().len() {
+                self.selected_row = res;
+            }
+        }
+    }
+    pub fn selsect_priv_row(&mut self) {
+        if let Some(res) = self.selected_row.checked_sub(1) {
+            self.selected_row = res;
+        }
+    }
+    pub fn reset_row(&mut self) {
+        self.selected_row = 0;
+    }
+    pub fn get_selected_row_index(&self) -> usize {
+        self.selected_row
+    }
+
+    //Selected cell column
+    pub fn selsect_next_column(&mut self) {
+        if let Some(res) = self.selected_column.checked_add(1) {
+            if res < self.get_current_table().unwrap().get_columns().len() {
+                self.selected_column = res;
+            }
+        }
+    }
+    pub fn selsect_priv_column(&mut self) {
+        if let Some(res) = self.selected_column.checked_sub(1) {
+            self.selected_column = res;
+        }
+    }
+    pub fn reset_column(&mut self) {
+        self.selected_column = 0;
+    }
+    pub fn get_selected_column_index(&self) -> usize {
+        self.selected_column
+    }
+
+    /////////////////////////
+    //END SELECTION SECTION//
+    /////////////////////////
+
 
     pub fn get_current_table(&self) -> Result<core::table::Table, String> {
         if self.get_table_count() > 0 {
@@ -213,5 +287,17 @@ impl App {
     
     pub fn get_database_name(&self) -> String {
         self.database_manager.get_database_name()
+    }
+
+    pub fn delete_table(&mut self, table_name: String) {
+        let result = self.database_manager.delete_table(&table_name);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
 }

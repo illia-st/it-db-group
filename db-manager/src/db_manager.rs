@@ -205,15 +205,16 @@ impl DatabaseManager {
         };
         res
     }
-    pub fn delete_db(&self, location: &str) -> Result<(), String> {
+    pub fn delete_db(&self, dir: &str, file_name: &str) -> Result<(), String> {
         // TODO: it will be nice to check if the provided location actually is a db but who cares?
-        match fs::remove_dir_all(location) {
+        let location = &format!("{}/{}", dir, file_name);
+        match fs::remove_file(location) {
             Ok(()) => {
-                log::debug!("db-manager in {} has been removed", location);
+                log::debug!("Database in {} has been removed", location);
                 Ok(())
             },
             Err(err) => {
-                let err_string = format!("Couldn't delete db-manager in {}: {}", location, err);
+                let err_string = format!("Couldn't delete database in {}: {}", location, err);
                 log::error!("{}", err_string.as_str());
                 Err(err_string)
             },
