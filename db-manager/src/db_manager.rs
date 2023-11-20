@@ -276,7 +276,7 @@ impl DatabaseManager {
             return Err("There is no such column in at least one of the tables".to_string())
         }
         for lhs_column in &lhs_columns {
-            if lhs_column != column && rhs_columns.contains(&lhs_column) {
+            if lhs_column != column && rhs_columns.contains(lhs_column) {
                 return Err("There are some other columns, that have equal names".to_string());
             }
         }

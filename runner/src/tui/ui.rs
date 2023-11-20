@@ -148,12 +148,12 @@ fn render_active_table(f: &mut Frame, layout: Rect, color: Color, table_result: 
 
     let mut table_content = Vec::new();
     
-    let mut row_number = 0;
-    for row in table.get_rows().iter() {
+    // let mut row_number = 0;
+    for (row_number, row) in table.get_rows().iter().enumerate() {
         let mut row_content = Vec::new();
         
-        let mut cell_number = 0;
-        for cell in row.get_values() {
+        // let mut cell_number = 0;
+        for (cell_number, cell) in row.get_values().iter().enumerate() {
             let cell_content =
                 match cell.get_value() {
                     core::types::ValueType::Int(int) => {
@@ -186,11 +186,11 @@ fn render_active_table(f: &mut Frame, layout: Rect, color: Color, table_result: 
 
             row_content.push(cell);
             
-            cell_number += 1;
+            // cell_number += 1;
         }
         table_content.push(Row::new(row_content));
         
-        row_number += 1;
+        // row_number += 1;
     }
 
     let table = 

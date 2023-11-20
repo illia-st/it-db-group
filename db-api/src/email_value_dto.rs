@@ -24,7 +24,7 @@ impl EmailValueDTO {
         writer.step_in(ion_rs::IonType::Struct).expect("Error while creating an ion struct");
 
         writer.set_field_name("value");
-        writer.write_string(&self.value.get_value().to_string()).unwrap();
+        writer.write_string(self.value.get_value()).unwrap();
 
         writer.step_out().unwrap();
         writer.flush().unwrap();
