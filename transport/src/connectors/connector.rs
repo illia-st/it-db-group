@@ -8,7 +8,7 @@ use super::core::{
     Socket,
 };
 
-pub struct ReplyConnector<HANDLER: Handler> {
+pub struct Connector<HANDLER: Handler> {
     endpoint: String,
     handler: Rc<HANDLER>,
     socket: zmq::Socket,
@@ -16,21 +16,21 @@ pub struct ReplyConnector<HANDLER: Handler> {
     context: Arc<zmq::Context>,
 }
 
-impl<HANDLER: Handler> Receiver for ReplyConnector<HANDLER> {
+impl<HANDLER: Handler> Receiver for Connector<HANDLER> {
     fn recv(&self) -> Vec<u8> {
         self.socket.recv_bytes(0)
             .expect("connector failed receiving data")
     }
 }
 
-impl<HANDLER: Handler> Sender for ReplyConnector<HANDLER> {
+impl<HANDLER: Handler> Sender for Connector<HANDLER> {
     fn send(&self, data: &[u8]) {
         self.socket.send(data, 0)
             .expect("client failed sending data");
     }
 }
 
-impl<HANDLER: Handler> Socket for ReplyConnector<HANDLER> {
+impl<HANDLER: Handler> Socket for Connector<HANDLER> {
 
     fn get_socket(&self) -> &zmq::Socket {
         &self.socket
@@ -49,7 +49,7 @@ impl<HANDLER: Handler> Socket for ReplyConnector<HANDLER> {
     }
 }
 
-impl<HANDLER: Handler> ReplyConnector<HANDLER> {
+impl<HANDLER: Handler> Connector<HANDLER> {
     pub fn new(endpoint: String, handler: Rc<HANDLER>, socket: zmq::Socket, context: Arc<zmq::Context>) -> Self {
         Self {
             endpoint,

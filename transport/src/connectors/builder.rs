@@ -1,9 +1,8 @@
 use std::rc::Rc;
 use std::sync::Arc;
 use super::core::Handler;
-use super::connector::ReplyConnector;
+use super::connector::Connector;
 
-#[derive(Default)]
 pub struct ConnectorBuilder<HANDLER: Handler> {
     context: Option<Arc<zmq::Context>>,
     endpoint: Option<String>,
@@ -11,6 +10,7 @@ pub struct ConnectorBuilder<HANDLER: Handler> {
 }
 
 impl<HANDLER: Handler> ConnectorBuilder<HANDLER> {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         ConnectorBuilder {
             context: None,
@@ -32,18 +32,18 @@ impl<HANDLER: Handler> ConnectorBuilder<HANDLER> {
         self
     }
 
-    pub fn build_requester(self) -> ReplyConnector<HANDLER> {
+    pub fn build_requester(self) -> Connector<HANDLER> {
         self.build(zmq::REQ)
     }
 
-    pub fn build_replyer(self) -> ReplyConnector<HANDLER> {
+    pub fn build_replyer(self) -> Connector<HANDLER> {
         self.build(zmq::REP)
     }
 
-    fn build(self, socket_type: zmq::SocketType) -> ReplyConnector<HANDLER> {
+    fn build(self, socket_type: zmq::SocketType) -> Connector<HANDLER> {
         let context = self.context.unwrap();
         let socket = context.socket(socket_type).unwrap();
-        ReplyConnector::new(
+        Connector::new(
             self.endpoint.as_ref().unwrap().to_string(),
             self.handler.as_ref().unwrap().clone(),
             socket,

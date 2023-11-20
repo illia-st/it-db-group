@@ -8,7 +8,5 @@ edition = "2021"
 ion-rs = "0.18.1"
 core = { path = "../core" }
 
-log.workspace = true
-log4rs.workspace = true
 image = "0.24.7"
 chrono = "0.4.31"

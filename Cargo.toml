@@ -7,11 +7,11 @@ members = [
     "runner",
     "value_generator",
     "transport",
+    "server",
 ]
 
 resolver = "2"
 
 [workspace.dependencies]
-
 log = "0.4.17"
-log4rs = "1.2.0"
+env_logger = "0.10.1"
