@@ -296,11 +296,6 @@ fn render_main_screen(f: &mut Frame, app: &mut App) {
                 render_screen_hood(f, inner_layout[0], Color::White, "".to_owned());
                 render_active_table(f, inner_layout[1], Color::Cyan, app.get_current_table(), app.get_selected_row_index(), app.get_selected_column_index());
             },
-            crate::app::OpenedDatabaseAppState::ActiveJoinResult => {
-                render_active_menu(f, layout[0], Color::White, app.get_database_name(), app.get_table_list(), app.get_selected_table_index());
-                render_screen_hood(f, inner_layout[0], Color::White, "".to_owned());
-                render_active_table(f, inner_layout[1], Color::Cyan, app.get_join_result_table(), app.get_selected_row_index(), app.get_selected_column_index());
-            },
             crate::app::OpenedDatabaseAppState::None => {
                 render_active_menu(f, layout[0], Color::White, app.get_database_name(), app.get_table_list(), app.get_selected_table_index());
                 render_screen_hood(f, inner_layout[0], Color::White, "".to_owned());

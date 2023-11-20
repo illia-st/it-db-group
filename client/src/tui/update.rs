@@ -1,6 +1,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use shellwords;
+use transport::connectors::core::{Handler, Receiver, Sender};
 
 use crate::app::App;
 use crate::app::ClosedDatabaseAppState;
@@ -8,6 +9,16 @@ use crate::app::DatabaseState;
 use crate::app::OpenedDatabaseAppState;
 
 use crate::parser::get_parser;
+
+pub struct CommandHandler {
+
+}
+
+impl Handler for CommandHandler {
+    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) {
+        log::info!("receiving info from server");
+    }
+}
 
 pub fn update(app: &mut App, key_event: KeyEvent) {
     if let KeyCode::Char(char) = key_event.code {
@@ -24,9 +35,6 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
                 app.selsect_priv_row()
             }
-            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
-                app.selsect_priv_row()
-            }
         },
         KeyCode::Char('s') => {
             if key_event.modifiers == KeyModifiers::CONTROL {
@@ -39,23 +47,14 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
                 app.selsect_next_row()
             }
-            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
-                app.selsect_next_row()
-            }
         },
         KeyCode::Char('a') => {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
                 app.selsect_priv_column()
             }
-            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
-                app.selsect_priv_column()
-            }
         },
         KeyCode::Char('d') => {
             if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable) = app.get_database_state() {
-                app.selsect_next_column()
-            }
-            if let DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult) = app.get_database_state() {
                 app.selsect_next_column()
             }
         },
@@ -206,13 +205,6 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
                         app.rename_row(
                             args.get_one::<String>("table_name").unwrap().to_owned(),
                             args.get_one::<String>("table_column_names").unwrap().to_owned()
-                        )
-                    },
-                    Some(("join", args)) => {
-                        app.get_join_result(
-                            args.get_one::<String>("left_table_name").unwrap().to_owned(),
-                            args.get_one::<String>("right_table_name").unwrap().to_owned(),
-                            args.get_one::<String>("column_name").unwrap().to_owned()
                         )
                     },
                     _ => {

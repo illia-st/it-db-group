@@ -1,7 +1,10 @@
 use std::ops::Deref;
+use std::rc::Rc;
 
 use db_manager::db_manager::DatabaseManager;
 use core::{self, table::Table};
+use transport::connectors::connector::Connector;
+use transport::connectors::core::Sender;
 
 pub enum Action {
     Tick,
@@ -33,13 +36,12 @@ pub enum OpenedDatabaseAppState {
     ActiveHood(String),
     ActiveMenu,
     ActiveTable,
-    ActiveJoinResult,
     #[default]
     None
 }
 
-#[derive(Debug, Default)]
 pub struct App {
+    db_manager: Rc<dyn Sender>,
     should_quit: bool,
     database_state: DatabaseState,
     buffer: String,
@@ -49,13 +51,22 @@ pub struct App {
     selected_table: usize,
     selected_row: usize,
     selected_column: usize,
-
-    join_result: Option<Table>
 }
 
 impl App {
-    pub fn new() -> Self {
-        Self::default()
+    // TODO: app is going to have a connector where it is going to sent requests
+    pub fn new(db_manager: Rc<dyn Sender>) -> Self {
+        Self {
+            db_manager,
+            should_quit: false,
+            database_state: DatabaseState::Closed(ClosedDatabaseAppState::None),
+            buffer: "".to_string(),
+            database_manager: Default::default(),
+            displayed_table: 0,
+            selected_table: 0,
+            selected_row: 0,
+            selected_column: 0,
+        }
     }
 
     pub fn tick(&self) {}
@@ -72,67 +83,79 @@ impl App {
         self.database_state.clone()
     }
     pub fn create_database(&mut self, name: String, database_path: String) {
-        let result = self.database_manager.create_db(&name, &database_path);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opening_database_error(e);
-            },
-        }
+        let data = format!("{name} {database_path}");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.create_db(&name, &database_path);
+
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opening_database_error(e);
+        //     },
+        // }
     }
     pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
-        let result = self.database_manager.read_db_from_directory(&database_dir_path, &database_name);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opening_database_error(e);
-            },
-        }
+        let data = format!("{database_dir_path} {database_name}");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.read_db_from_directory(&database_dir_path, &database_name);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opening_database_error(e);
+        //     },
+        // }
     }
     pub fn close_database(&mut self, need_to_save: bool) {
-        let result = self.database_manager.close_db(need_to_save);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opening_database_error(e);
-            },
-        }
+        let data = format!("{need_to_save}");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.close_db(need_to_save);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opening_database_error(e);
+        //     },
+        // }
     }
     pub fn delete_database(&mut self, database_dir_path: String, database_name: String) {
-        let result = self.database_manager.delete_db(&database_dir_path, &database_name);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opening_database_error(e);
-            },
-        }
+        let data = format!("{database_dir_path} {database_name}");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.delete_db(&database_dir_path, &database_name);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opening_database_error(e);
+        //     },
+        // }
     }
 
     pub fn create_table(&mut self, table_name: String, columns: String, data_types: String) {
         let column_names = columns.split_terminator(';').collect::<Vec<&str>>();
         let column_data = data_types.split_terminator(';').collect::<Vec<&str>>();
 
-        let result = self.database_manager.create_table(
-            table_name.deref(),
-            column_names, 
-            column_data
-        );
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
+        let data = format!("{table_name} {columns} {data_types}");
+        self.db_manager.send(data.as_bytes());
+
+        // let result = self.database_manager.create_table(
+        //     table_name.deref(),
+        //     column_names,
+        //     column_data
+        // );
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e);
+        //     },
+        // }
     }
 
     pub fn activete_closed_database_hood(&mut self) {
@@ -169,9 +192,6 @@ impl App {
     }
     pub fn activete_opened_database_active_table(&mut self) {
         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveTable)
-    }
-    pub fn activete_opened_database_active_join_result(&mut self) {
-        self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
     }
 
     pub fn release_buffer(&mut self) -> String {
@@ -278,81 +298,74 @@ impl App {
     }
 
     pub fn add_row(&mut self, table_name: String, raw_values: String) {
-        let result = self.database_manager.add_row(&table_name, &raw_values);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
+        let data = format!("{table_name} {raw_values}");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.add_row(&table_name, &raw_values);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e);
+        //     },
+        // }
     }
     pub fn delete_row(&mut self, table_name: String, raw_index_value: String) {
         let parsing_result = raw_index_value.parse::<u64>();
-        match &parsing_result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e.to_string());
-            },
-        }
-
-        let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
+        let data = format!("delete {table_name} {raw_index_value}");
+        self.db_manager.send(data.as_bytes());
+        // match &parsing_result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e.to_string());
+        //     },
+        // }
+        //
+        // let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e);
+        //     },
+        // }
     }
     
     pub fn get_database_name(&self) -> String {
-        self.database_manager.get_database_name()
+        let data = "get db name".to_string();
+        self.db_manager.send(data.as_bytes());
+        "".to_string()
     }
 
     pub fn delete_table(&mut self, table_name: String) {
-        let result = self.database_manager.delete_table(&table_name);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
-    }
-
-    pub fn get_join_result(&mut self, lhs_table_name: String, rhs_table_name: String, column: String) {
-        let result = self.database_manager.join(&lhs_table_name, &rhs_table_name, &column);
-        match result {
-            Ok(_) => {
-                self.join_result = Some(result.unwrap());
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::ActiveJoinResult)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
-    }
-
-    pub fn get_join_result_table(&self) -> Result<core::table::Table, String> {
-        Ok(self.join_result.clone().unwrap())
+        let data = format!("delete table {table_name} ");
+        self.db_manager.send(data.as_bytes());
+        // let result = self.database_manager.delete_table(&table_name);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e);
+        //     },
+        // }
     }
 
     pub fn rename_row(&mut self, table_name: String, columns: String) {
-        let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
-        let result = self.database_manager.rename(&table_name, column_names);
-        match result {
-            Ok(_) => {
-                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-            },
-            Err(e) => {
-                self.opened_database_error(e);
-            },
-        }
+        let data = format!("rename row {table_name} {columns}");
+        self.db_manager.send(data.as_bytes());
+        // let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
+        // let result = self.database_manager.rename(&table_name, column_names);
+        // match result {
+        //     Ok(_) => {
+        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+        //     },
+        //     Err(e) => {
+        //         self.opened_database_error(e);
+        //     },
+        // }
     }
 }
