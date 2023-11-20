@@ -90,6 +90,7 @@ pub fn update(app: &mut App, key_event: KeyEvent) {
             }
         }
         KeyCode::Enter => {
+            // TODO: move this part to the server one. It can parse an actual command inside the server
             if let DatabaseState::Closed(ClosedDatabaseAppState::ActiveHood(_)) = app.get_database_state() {
                 let words = shellwords::split(&app.get_buffer());
                 let matches = get_parser().try_get_matches_from_mut(words.unwrap());

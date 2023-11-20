@@ -6,6 +6,7 @@ members = [
     "db-manager",
     "runner",
     "value_generator",
+    "transport",
 ]
 
 resolver = "2"
