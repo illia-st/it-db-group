@@ -8,6 +8,7 @@ members = [
     "value_generator",
     "transport",
     "server",
+    "client",
 ]
 
 resolver = "2"

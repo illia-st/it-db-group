@@ -10,7 +10,7 @@ pub struct Server {
     pool: ThreadPool,
 }
 
-const DB_MANAGER_ENDPOINT: &str = "tcp://server/db-manager";
+const DB_MANAGER_ENDPOINT: &str = "tcp://0.0.0.0:4044";
 impl Server {
     pub fn new(pool: ThreadPool) -> Self {
         Self {
