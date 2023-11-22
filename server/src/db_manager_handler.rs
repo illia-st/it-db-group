@@ -39,7 +39,7 @@ impl Handler for DbManagerHandler {
             "delete" => {
                 let database_path = client_req.database_path.unwrap();
                 let database_name = client_req.database_name.unwrap();
-                let res = self.manager.delete_db(database_name.as_str(), database_path.as_str());
+                let res = self.manager.delete_db(database_path.as_str(), database_name.as_str());
                 if let Ok(()) = res {
                     log::debug!("delete success");
                     Envelope::new("delete", &[]).encode()
@@ -51,7 +51,7 @@ impl Handler for DbManagerHandler {
             "open" => {
                 let database_path = client_req.database_path.unwrap();
                 let database_name = client_req.database_name.unwrap();
-                let res = self.manager.create_db(database_name.as_str(), database_path.as_str());
+                let res = self.manager.read_db_from_directory(database_path.as_str(), database_name.as_str());
                 if let Some(db) = self.manager.get_db() {
                     log::debug!("open success");
                     Envelope::new("open", db.encode().as_slice()).encode()
@@ -61,7 +61,12 @@ impl Handler for DbManagerHandler {
                 }
             },
             "close" => {
-                let save = client_req.save.unwrap();
+                let save = if let Some(db_to_save) = client_req.db_to_save {
+                    self.manager.set_db_dto(db_to_save);
+                    true
+                } else {
+                    false
+                };
                 let res = self.manager.close_db(save);
                 if let Ok(()) = res {
                     log::debug!("close success");

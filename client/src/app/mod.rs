@@ -165,11 +165,16 @@ impl App {
         }
     }
     pub fn close_database(&mut self, need_to_save: bool) {
+        let db_to_save = if need_to_save {
+            Some(self.database_manager.get_db().unwrap())
+        } else {
+            None
+        };
         let client_req = ClientRequest::new(
             "close".to_string(),
             None,
             None,
-            Some(need_to_save)
+            db_to_save
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
         if let Some(connector) = self.db_manager.as_ref() {

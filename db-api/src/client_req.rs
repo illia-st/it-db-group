@@ -1,6 +1,7 @@
 use ion_rs;
 use ion_rs::IonWriter;
 use ion_rs::IonReader;
+use crate::db::DatabaseDTO;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ClientRequest {
@@ -8,16 +9,16 @@ pub struct ClientRequest {
     // arguments
     pub database_path: Option<String>,
     pub database_name: Option<String>,
-    pub save: Option<bool>,
+    pub db_to_save: Option<DatabaseDTO>,
 }
 
 impl ClientRequest {
-    pub fn new(command_type: String, database_path: Option<String>, database_name: Option<String>, save: Option<bool>) -> ClientRequest {
+    pub fn new(command_type: String, database_path: Option<String>, database_name: Option<String>, db_to_save: Option<DatabaseDTO>) -> ClientRequest {
         Self {
             command_type,
             database_path,
             database_name,
-            save,
+            db_to_save,
         }
     }
     pub fn encode(&self) -> Vec<u8> {
@@ -43,10 +44,10 @@ impl ClientRequest {
             None => writer.write_null(ion_rs::IonType::String).unwrap(),
         }
 
-        writer.set_field_name("save");
-        match &self.save {
-            Some(save) => writer.write_bool(*save).unwrap(),
-            None => writer.write_null(ion_rs::IonType::Bool).unwrap(),
+        writer.set_field_name("db_to_save");
+        match &self.db_to_save {
+            Some(db_to_save) => writer.write_blob(db_to_save.encode()).unwrap(),
+            None => writer.write_null(ion_rs::IonType::Blob).unwrap(),
         }
 
         writer.step_out().unwrap();
@@ -60,12 +61,12 @@ impl ClientRequest {
         binary_user_reader.step_in().unwrap();
 
         binary_user_reader.next().unwrap();
-        let command_type = binary_user_reader.read_string().unwrap().to_string();
+        let command_type = binary_user_reader.read_str().unwrap().to_string();
 
         binary_user_reader.next().unwrap();
         let database_path = match binary_user_reader.current() {
             ion_rs::StreamItem::Value(_) => {
-                Some(binary_user_reader.read_string().unwrap().to_string())
+                Some(binary_user_reader.read_str().unwrap().to_string())
             },
             ion_rs::StreamItem::Null(_) => None,
             ion_rs::StreamItem::Nothing => todo!(),
@@ -74,16 +75,23 @@ impl ClientRequest {
         binary_user_reader.next().unwrap();
         let database_name = match binary_user_reader.current() {
             ion_rs::StreamItem::Value(_) => {
-                Some(binary_user_reader.read_string().unwrap().to_string())
+                Some(binary_user_reader.read_str().unwrap().to_string())
             },
             ion_rs::StreamItem::Null(_) => None,
             ion_rs::StreamItem::Nothing => todo!(),
         };
 
         binary_user_reader.next().unwrap();
-        let save = match binary_user_reader.current() {
+        let db_to_save = match binary_user_reader.current() {
             ion_rs::StreamItem::Value(_) => {
-                Some(binary_user_reader.read_bool().unwrap())
+                let db_to_save = DatabaseDTO::decode(
+                    binary_user_reader
+                        .read_blob()
+                        .unwrap()
+                        .as_slice()
+                        .to_owned()
+                );
+                Some(db_to_save)
             },
             ion_rs::StreamItem::Null(_) => None,
             ion_rs::StreamItem::Nothing => todo!(),
@@ -92,7 +100,7 @@ impl ClientRequest {
             command_type,
             database_path,
             database_name,
-            save,
+            db_to_save,
         )
 
     }
