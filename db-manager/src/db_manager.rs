@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -35,6 +35,14 @@ impl DatabaseManager {
         Self {
             supported_types: SUPPORTED_TYPES.clone(),
             database: RefCell::new(None),
+        }
+    }
+    pub fn get_db(&self) -> Option<DatabaseDTO> {
+        if let Some(db) = self.database.borrow().as_ref() {
+            let dto: DatabaseDTO = DatabaseDTO::from(db);
+            Some(dto)
+        } else {
+            None
         }
     }
     pub fn create_db(&self, name: &str, location: &str) -> Result<(), String> {
@@ -83,8 +91,12 @@ impl DatabaseManager {
             }
         };
         let db_dto = DatabaseDTO::decode(database);
-        self.database.borrow_mut().replace(Database::from(db_dto));
+        self.set_db_dto(db_dto);
         Ok(())
+    }
+
+    pub fn set_db_dto(&self, db_dto: DatabaseDTO) {
+        self.database.borrow_mut().replace(Database::from(db_dto));
     }
     
     pub fn create_table(&self, table_name: &str, columns: Vec<&str>, data_types: Vec<&str>) -> Result<(), String> {
@@ -200,7 +212,7 @@ impl DatabaseManager {
         }
         let db = self.database.take().unwrap();
         let res = if save {
-            let db_dto: DatabaseDTO = db.into();
+            let db_dto: DatabaseDTO = DatabaseDTO::from(&db);
             let location = &format!("{}/{}", db_dto.location, db_dto.name);
             let fd = fs::OpenOptions::new()
                 .write(true)

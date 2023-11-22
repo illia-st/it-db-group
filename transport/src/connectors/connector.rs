@@ -36,8 +36,8 @@ impl<HANDLER: Handler> Socket for Connector<HANDLER> {
         &self.socket
     }
 
-    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) {
-        self.handler.handle(receiver, sender);
+    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) -> Option<Vec<u8>> {
+        self.handler.handle(receiver, sender)
     }
 
     fn get_receiver(&self) -> &dyn Receiver {

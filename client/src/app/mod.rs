@@ -1,10 +1,15 @@
 use std::ops::Deref;
 use std::rc::Rc;
 
+
 use db_manager::db_manager::DatabaseManager;
 use core::{self, table::Table};
+use db_api::client_req::ClientRequest;
+use db_api::{Decoder, Encoder};
+use db_api::db::DatabaseDTO;
+use db_api::envelope::Envelope;
 use transport::connectors::connector::Connector;
-use transport::connectors::core::Sender;
+use transport::connectors::core::{Handler, Receiver, Sender};
 
 pub enum Action {
     Tick,
@@ -41,7 +46,7 @@ pub enum OpenedDatabaseAppState {
 }
 
 pub struct App {
-    db_manager: Rc<dyn Sender>,
+    db_manager: Option<Rc<dyn Sender>>,
     should_quit: bool,
     database_state: DatabaseState,
     buffer: String,
@@ -51,13 +56,14 @@ pub struct App {
     selected_table: usize,
     selected_row: usize,
     selected_column: usize,
+    sent_req: bool,
 }
 
 impl App {
     // TODO: app is going to have a connector where it is going to sent requests
-    pub fn new(db_manager: Rc<dyn Sender>) -> Self {
+    pub fn new() -> Self {
         Self {
-            db_manager,
+            db_manager: None,
             should_quit: false,
             database_state: DatabaseState::Closed(ClosedDatabaseAppState::None),
             buffer: "".to_string(),
@@ -66,7 +72,16 @@ impl App {
             selected_table: 0,
             selected_row: 0,
             selected_column: 0,
+            sent_req: false,
         }
+    }
+
+    pub fn is_sent_req(&self) -> bool {
+        self.sent_req
+    }
+
+    pub fn set_connector(&mut self, connector: Rc<dyn Sender>) {
+        self.db_manager = Some(connector);
     }
 
     pub fn tick(&self) {}
@@ -82,80 +97,121 @@ impl App {
     pub fn get_database_state(&self) -> DatabaseState {
         self.database_state.clone()
     }
-    pub fn create_database(&mut self, name: String, database_path: String) {
-        let data = format!("{name} {database_path}");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.create_db(&name, &database_path);
 
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opening_database_error(e);
-        //     },
-        // }
+    pub fn update_state_by_server_reply(&mut self, server_reply: Vec<Option<Vec<u8>>>) {
+        self.sent_req = false;
+        for reply in server_reply.into_iter() {
+            let data = if let Some(data) = reply {
+                data
+            } else {
+                continue;
+            };
+            let envelope = Envelope::decode(data.as_slice());
+            match envelope.get_type() {
+                "create" => {
+                    let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
+                    self.database_manager.set_db_dto(db_dto);
+                    self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None);
+                },
+                "delete" => {
+                    self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
+                    let _ = self.database_manager.close_db(false);
+                },
+                "open" => {
+                    let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
+                    self.database_manager.set_db_dto(db_dto);
+                    self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+                },
+                "close" => {
+                    self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
+                    let _ = self.database_manager.close_db(false);
+                },
+                "error" => {
+                    let error = String::from_utf8(envelope.get_data().to_vec()).unwrap();
+                    self.opening_database_error(error);
+                }
+                _ => panic!("received message type isn't supported"),
+            }
+        }
+    }
+    pub fn create_database(&mut self, name: String, database_path: String) {
+        let client_req = ClientRequest::new(
+            "create".to_string(),
+            Some(database_path),
+            Some(name),
+            None,
+        ).encode();
+        let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        if let Some(connector) = self.db_manager.as_ref() {
+            connector.send(envelope.as_slice());
+            self.sent_req = true;
+        } else {
+            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
+        }
     }
     pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
-        let data = format!("{database_dir_path} {database_name}");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.read_db_from_directory(&database_dir_path, &database_name);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opening_database_error(e);
-        //     },
-        // }
+        let client_req = ClientRequest::new(
+            "open".to_string(),
+            Some(database_dir_path),
+            Some(database_name),
+            None
+        ).encode();
+        let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        if let Some(connector) = self.db_manager.as_ref() {
+            connector.send(envelope.as_slice());
+            self.sent_req = true;
+        } else {
+            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
+        }
     }
     pub fn close_database(&mut self, need_to_save: bool) {
-        let data = format!("{need_to_save}");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.close_db(need_to_save);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opening_database_error(e);
-        //     },
-        // }
+        let client_req = ClientRequest::new(
+            "close".to_string(),
+            None,
+            None,
+            Some(need_to_save)
+        ).encode();
+        let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        if let Some(connector) = self.db_manager.as_ref() {
+            connector.send(envelope.as_slice());
+            self.sent_req = true;
+        } else {
+            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
+        }
     }
     pub fn delete_database(&mut self, database_dir_path: String, database_name: String) {
-        let data = format!("{database_dir_path} {database_name}");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.delete_db(&database_dir_path, &database_name);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opening_database_error(e);
-        //     },
-        // }
+        let client_req = ClientRequest::new(
+            "delete".to_string(),
+            Some(database_dir_path),
+            Some(database_name),
+            None
+        ).encode();
+        let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        if let Some(connector) = self.db_manager.as_ref() {
+            connector.send(envelope.as_slice());
+            self.sent_req = true;
+        } else {
+            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
+        }
     }
 
     pub fn create_table(&mut self, table_name: String, columns: String, data_types: String) {
         let column_names = columns.split_terminator(';').collect::<Vec<&str>>();
         let column_data = data_types.split_terminator(';').collect::<Vec<&str>>();
 
-        let data = format!("{table_name} {columns} {data_types}");
-        self.db_manager.send(data.as_bytes());
-
-        // let result = self.database_manager.create_table(
-        //     table_name.deref(),
-        //     column_names,
-        //     column_data
-        // );
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e);
-        //     },
-        // }
+        let result = self.database_manager.create_table(
+            table_name.deref(),
+            column_names,
+            column_data
+        );
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
 
     pub fn activete_closed_database_hood(&mut self) {
@@ -288,7 +344,6 @@ impl App {
     //END SELECTION SECTION//
     /////////////////////////
 
-
     pub fn get_current_table(&self) -> Result<core::table::Table, String> {
         if self.get_table_count() > 0 {
             Ok(self.database_manager.get_table(&self.get_table_list()[self.displayed_table]).unwrap())
@@ -298,74 +353,64 @@ impl App {
     }
 
     pub fn add_row(&mut self, table_name: String, raw_values: String) {
-        let data = format!("{table_name} {raw_values}");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.add_row(&table_name, &raw_values);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e);
-        //     },
-        // }
+        let result = self.database_manager.add_row(&table_name, &raw_values);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
     pub fn delete_row(&mut self, table_name: String, raw_index_value: String) {
         let parsing_result = raw_index_value.parse::<u64>();
-        let data = format!("delete {table_name} {raw_index_value}");
-        self.db_manager.send(data.as_bytes());
-        // match &parsing_result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e.to_string());
-        //     },
-        // }
-        //
-        // let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e);
-        //     },
-        // }
+        match &parsing_result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e.to_string());
+            },
+        }
+
+        let result = self.database_manager.delete_row(&table_name, parsing_result.unwrap());
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
     
     pub fn get_database_name(&self) -> String {
-        let data = "get db name".to_string();
-        self.db_manager.send(data.as_bytes());
-        "".to_string()
+        self.database_manager.get_database_name()
     }
 
     pub fn delete_table(&mut self, table_name: String) {
-        let data = format!("delete table {table_name} ");
-        self.db_manager.send(data.as_bytes());
-        // let result = self.database_manager.delete_table(&table_name);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e);
-        //     },
-        // }
+        let result = self.database_manager.delete_table(&table_name);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
 
     pub fn rename_row(&mut self, table_name: String, columns: String) {
-        let data = format!("rename row {table_name} {columns}");
-        self.db_manager.send(data.as_bytes());
-        // let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
-        // let result = self.database_manager.rename(&table_name, column_names);
-        // match result {
-        //     Ok(_) => {
-        //         self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-        //     },
-        //     Err(e) => {
-        //         self.opened_database_error(e);
-        //     },
-        // }
+        let column_names = columns.split_terminator(';').collect::<Vec<&str>>().iter().map(|s| s.to_owned().to_owned()).collect();
+        let result = self.database_manager.rename(&table_name, column_names);
+        match result {
+            Ok(_) => {
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            Err(e) => {
+                self.opened_database_error(e);
+            },
+        }
     }
 }

@@ -1,5 +1,5 @@
 pub trait Handler {
-    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender);
+    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) -> Option<Vec<u8>>;
 }
 
 pub trait Receiver {
@@ -15,7 +15,7 @@ pub trait Socket {
 
     fn get_socket(&self) -> &zmq::Socket;
 
-    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender);
+    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) -> Option<Vec<u8>>;
 
     fn get_receiver(&self) -> &dyn Receiver;
 

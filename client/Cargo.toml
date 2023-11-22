@@ -9,6 +9,7 @@ edition = "2021"
 core = { path = "../core" }
 db-manager = { path = "../db-manager" }
 transport = { path = "../transport" }
+db-api = { path = "../db-api" }
 env_logger.workspace = true
 log.workspace = true
 

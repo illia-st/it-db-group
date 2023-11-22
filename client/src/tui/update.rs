@@ -10,16 +10,6 @@ use crate::app::OpenedDatabaseAppState;
 
 use crate::parser::get_parser;
 
-pub struct CommandHandler {
-
-}
-
-impl Handler for CommandHandler {
-    fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) {
-        log::info!("receiving info from server");
-    }
-}
-
 pub fn update(app: &mut App, key_event: KeyEvent) {
     if let KeyCode::Char(char) = key_event.code {
         app.add_char_to_buffer(char);
