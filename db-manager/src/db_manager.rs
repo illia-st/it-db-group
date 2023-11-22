@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -37,6 +37,16 @@ impl DatabaseManager {
             database: RefCell::new(None),
         }
     }
+    pub fn get_db(&self) -> Option<DatabaseDTO> {
+        if let Some(db) = self.database.borrow().as_ref() {
+            let dto: DatabaseDTO = DatabaseDTO::from(db);
+            log::info!("opening db {:?}", dto);
+            Some(dto)
+        } else {
+            None
+        }
+    }
+
     pub fn create_db(&self, name: &str, location: &str) -> Result<(), String> {
         let _ = self.close_db(true);
         // check if such a dir is existing
@@ -83,8 +93,14 @@ impl DatabaseManager {
             }
         };
         let db_dto = DatabaseDTO::decode(database);
-        self.database.borrow_mut().replace(Database::from(db_dto));
+        self.set_db_dto(db_dto);
         Ok(())
+    }
+
+    pub fn set_db_dto(&self, db_dto: DatabaseDTO) {
+        log::debug!("setting a new db: {:?}", db_dto);
+        self.database.borrow_mut().replace(Database::from(db_dto));
+        log::debug!("a new db being set up, {:?}", self.database.borrow());
     }
     
     pub fn create_table(&self, table_name: &str, columns: Vec<&str>, data_types: Vec<&str>) -> Result<(), String> {
@@ -200,7 +216,9 @@ impl DatabaseManager {
         }
         let db = self.database.take().unwrap();
         let res = if save {
-            let db_dto: DatabaseDTO = db.into();
+            log::debug!("saving db {:?}", db);
+            let db_dto: DatabaseDTO = DatabaseDTO::from(&db);
+            log::debug!("dto to save {:?}", db_dto);
             let location = &format!("{}/{}", db_dto.location, db_dto.name);
             let fd = fs::OpenOptions::new()
                 .write(true)
