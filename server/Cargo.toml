@@ -13,3 +13,4 @@ env_logger.workspace = true
 log.workspace = true
 threadpool = "1.8.1"
 zmq = "0.10.0"
+simple-websockets = "0.1.6"
