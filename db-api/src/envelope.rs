@@ -1,6 +1,6 @@
 use ion_rs;
 use ion_rs::element::writer::TextKind;
-use ion_rs::IonWriter;
+use ion_rs::{IonWriter, TextWriterBuilder};
 use ion_rs::IonReader;
 
 
@@ -31,9 +31,8 @@ impl crate::Encoder for Envelope {
     fn encode(&self) -> Vec<u8> {
         let buffer: Vec<u8> = Vec::new();
 
-        let text_writer_builder = ion_rs::TextWriterBuilder::new(TextKind::Compact);
-
-        let mut writer = text_writer_builder.build(buffer).unwrap();
+        let text_writer_builder = TextWriterBuilder::new(TextKind::Compact);
+        let mut writer = text_writer_builder.build(buffer.clone()).unwrap();
 
         writer.step_in(ion_rs::IonType::Struct).expect("Error while creating an ion struct");
 
