@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use ion_rs;
-use ion_rs::IonWriter;
+use ion_rs::{IonWriter, TextWriterBuilder};
 use ion_rs::element::reader::ElementReader;
+use ion_rs::element::writer::TextKind;
 use ion_rs::IonReader;
 use core::db::Database;
 use core::table::Table;
@@ -27,8 +28,20 @@ impl From<DatabaseDTO> for Database {
     }
 }
 
-impl From<Database> for DatabaseDTO {
-    fn from(value: Database) -> Self {
+impl From<&DatabaseDTO> for Database {
+    fn from(value: &DatabaseDTO) -> Self {
+        let mut tables = HashMap::with_capacity(value.tables.len());
+        value.tables.iter().for_each(|table| {
+            tables.insert(table.name.clone(), Table::from(table.clone()));
+        });
+        let db = Database::new(value.name.clone(), value.location.clone());
+        db.set_tables(tables);
+        db
+    }
+}
+
+impl From<&Database> for DatabaseDTO {
+    fn from(value: &Database) -> Self {
         let tables: Vec<TableDTO> = value.tables
             .take()
             .into_values()
@@ -37,8 +50,8 @@ impl From<Database> for DatabaseDTO {
             })
             .collect();
         Self {
-            name: value.name,
-            location: value.location,
+            name: value.name.clone(),
+            location: value.location.clone(),
             tables,
         }
     }
@@ -55,8 +68,8 @@ impl DatabaseDTO {
     pub fn encode(&self) -> Vec<u8> {
         let buffer: Vec<u8> = Vec::new();
 
-        let binary_writer_builder = ion_rs::BinaryWriterBuilder::new();
-        let mut writer = binary_writer_builder.build(buffer.clone()).unwrap();
+        let text_writer_builder = TextWriterBuilder::new(TextKind::Compact);
+        let mut writer = text_writer_builder.build(buffer.clone()).unwrap();
 
         writer.step_in(ion_rs::IonType::Struct).expect("Error while creating an ion struct");
 
