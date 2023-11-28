@@ -5,13 +5,21 @@ use db_manager::db_manager::DatabaseManager;
 use transport::connectors::core::{Handler, Receiver, Sender};
 
 pub struct DbManagerHandler {
-    #[allow(dead_code)]
     manager: DatabaseManager,
+    database: mongodb::sync::Database,
 }
 
 impl DbManagerHandler {
-    pub fn new(manager: DatabaseManager) -> Self {
-        Self { manager }
+    pub fn new(manager: DatabaseManager, db_client: mongodb::sync::Client) -> Self {
+        let database = db_client.database("databases");
+        match database.create_collection("list_of_databases", None) {
+            Ok(_) => log::debug!("collection has been created"),
+            Err(err) => log::error!("got an error after creating a collection {}", err),
+        }
+        Self { 
+            manager,
+            database,
+        }
     }
 }
 
@@ -29,6 +37,9 @@ impl Handler for DbManagerHandler {
                 let database_name = client_req.database_name.unwrap();
                 let res = self.manager.create_db(database_name.as_str(), database_path.as_str());
                 if let Some(db) = self.manager.get_db() {
+                    // we need to save it now and then we will be able to update the document by knowing db name
+                    todo!("finish writing commands for the mongodb");
+                    self.database.run_command(command, selection_criteria);
                     log::debug!("create success");
                     Envelope::new("create", db.encode().as_slice()).encode()
                 } else {
@@ -41,6 +52,8 @@ impl Handler for DbManagerHandler {
                 let database_name = client_req.database_name.unwrap();
                 let res = self.manager.delete_db(database_path.as_str(), database_name.as_str());
                 if let Ok(()) = res {
+                    todo!("finish writing commands for the mongodb");
+                    self.database.run_command(command, selection_criteria); 
                     log::debug!("delete success");
                     Envelope::new("delete", &[]).encode()
                 } else {
@@ -51,6 +64,10 @@ impl Handler for DbManagerHandler {
             "open" => {
                 let database_path = client_req.database_path.unwrap();
                 let database_name = client_req.database_name.unwrap();
+                todo!("finish writing commands for the mongodb");
+                // need to get the db from mongodb instead of reading it from the directory
+                self.database.run_command(command, selection_criteria);
+                    
                 let res = self.manager.read_db_from_directory(database_path.as_str(), database_name.as_str());
                 if let Some(db) = self.manager.get_db() {
                     log::debug!("open success");
@@ -67,7 +84,19 @@ impl Handler for DbManagerHandler {
                 } else {
                     false
                 };
-                let res = self.manager.close_db(save);
+                match client_req.db_to_save {
+                    Some(db) => {
+                        // need to save it now
+                        todo!("finish writing commands for the mongodb");
+                        // need to get the db from mongodb instead of reading it from the directory
+                        self.database.run_command(command, selection_criteria);
+                    },
+                    None => {
+                        self.manager.close_db();
+                    },
+                }
+                // TODO: parse returned document from the mongo database
+                let res = self.manager.close_db();
                 if let Ok(()) = res {
                     log::debug!("close success");
                     Envelope::new("close", &[]).encode()

@@ -5,16 +5,21 @@ use db_manager::db_manager::DatabaseManager;
 use transport::connectors::builder::ConnectorBuilder;
 use transport::connectors::poller::Poller;
 use crate::db_manager_handler::DbManagerHandler;
+use mongodb::sync::Client;
 
 pub struct Server {
     pool: ThreadPool,
+    mongo: Client,
 }
 
 const DB_MANAGER_ENDPOINT: &str = "tcp://0.0.0.0:4044";
+const MONGO_DB_ENDPOINT: &str = "mongodb://localhost:27017";
 impl Server {
     pub fn new(pool: ThreadPool) -> Self {
+        let mongo = Client::with_uri_str(MONGO_DB_ENDPOINT).unwrap();
         Self {
             pool,
+            mongo,
         }
     }
 
