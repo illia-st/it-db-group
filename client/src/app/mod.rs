@@ -1,15 +1,13 @@
 use std::ops::Deref;
-use std::rc::Rc;
-
+use reqwest::blocking;
+use reqwest::blocking::Response;
 
 use db_manager::db_manager::DatabaseManager;
-use core::{self, table::Table};
+use core;
 use db_api::client_req::ClientRequest;
 use db_api::{Decoder, Encoder};
 use db_api::db::DatabaseDTO;
 use db_api::envelope::Envelope;
-use transport::connectors::connector::Connector;
-use transport::connectors::core::{Handler, Receiver, Sender};
 
 pub enum Action {
     Tick,
@@ -46,7 +44,7 @@ pub enum OpenedDatabaseAppState {
 }
 
 pub struct App {
-    db_manager: Option<Rc<dyn Sender>>,
+    db_manager: blocking::Client,
     should_quit: bool,
     database_state: DatabaseState,
     buffer: String,
@@ -56,14 +54,13 @@ pub struct App {
     selected_table: usize,
     selected_row: usize,
     selected_column: usize,
-    sent_req: bool,
 }
 
 impl App {
     // TODO: app is going to have a connector where it is going to sent requests
     pub fn new() -> Self {
         Self {
-            db_manager: None,
+            db_manager: blocking::Client::new(),
             should_quit: false,
             database_state: DatabaseState::Closed(ClosedDatabaseAppState::None),
             buffer: "".to_string(),
@@ -72,16 +69,7 @@ impl App {
             selected_table: 0,
             selected_row: 0,
             selected_column: 0,
-            sent_req: false,
         }
-    }
-
-    pub fn is_sent_req(&self) -> bool {
-        self.sent_req
-    }
-
-    pub fn set_connector(&mut self, connector: Rc<dyn Sender>) {
-        self.db_manager = Some(connector);
     }
 
     pub fn tick(&self) {}
@@ -98,41 +86,41 @@ impl App {
         self.database_state.clone()
     }
 
-    pub fn update_state_by_server_reply(&mut self, server_reply: Vec<Option<Vec<u8>>>) {
-        self.sent_req = false;
-        for reply in server_reply.into_iter() {
-            let data = if let Some(data) = reply {
-                data
-            } else {
-                continue;
-            };
-            let envelope = Envelope::decode(data.as_slice());
-            match envelope.get_type() {
-                "create" => {
-                    let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
-                    self.database_manager.set_db_dto(db_dto);
-                    self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None);
-                },
-                "delete" => {
-                    self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
-                    let _ = self.database_manager.close_db(false);
-                },
-                "open" => {
-                    let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
-                    self.database_manager.set_db_dto(db_dto);
-                    self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
-                },
-                "close" => {
-                    self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
-                    let _ = self.database_manager.close_db(false);
-                },
-                "error" => {
-                    let error = String::from_utf8(envelope.get_data().to_vec()).unwrap();
-                    self.opening_database_error(error);
-                }
-                _ => panic!("received message type isn't supported"),
+    pub fn update_state_by_server_reply(&mut self, response: reqwest::Result<Response>) {
+        let response = if let Ok(response) = response {
+            response
+        } else {
+            self.opening_database_error(format!("couldn't send request to the server: {}", response.err().unwrap()));
+            return;
+        };
+        let data = response.bytes().expect("expected to get response in bytes");
+        let envelope = Envelope::decode(data.as_ref());
+        match envelope.get_type() {
+            "create" => {
+                let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
+                self.database_manager.set_db_dto(db_dto);
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None);
+            },
+            "delete" => {
+                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
+                let _ = self.database_manager.close_db(false);
+            },
+            "open" => {
+                let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
+                self.database_manager.set_db_dto(db_dto);
+                self.database_state = DatabaseState::Opened(OpenedDatabaseAppState::None)
+            },
+            "close" => {
+                self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
+                let _ = self.database_manager.close_db(false);
+            },
+            "error" => {
+                let error = String::from_utf8(envelope.get_data().to_vec()).unwrap();
+                self.opening_database_error(error);
             }
+            _ => panic!("received message type isn't supported"),
         }
+
     }
     pub fn create_database(&mut self, name: String, database_path: String) {
         let client_req = ClientRequest::new(
@@ -142,12 +130,11 @@ impl App {
             None,
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        if let Some(connector) = self.db_manager.as_ref() {
-            connector.send(envelope.as_slice());
-            self.sent_req = true;
-        } else {
-            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
-        }
+        // investigate it later
+        let response = self.db_manager.post("http://localhost/post")
+            .body(envelope)
+            .send();
+        self.update_state_by_server_reply(response);
     }
     pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
         let client_req = ClientRequest::new(
@@ -157,12 +144,10 @@ impl App {
             None
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        if let Some(connector) = self.db_manager.as_ref() {
-            connector.send(envelope.as_slice());
-            self.sent_req = true;
-        } else {
-            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
-        }
+        let response = self.db_manager.get("http://localhost/get")
+            .body(envelope)
+            .send();
+        self.update_state_by_server_reply(response);
     }
     pub fn close_database(&mut self, need_to_save: bool) {
         let db_to_save = if need_to_save {
@@ -177,12 +162,10 @@ impl App {
             db_to_save
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        if let Some(connector) = self.db_manager.as_ref() {
-            connector.send(envelope.as_slice());
-            self.sent_req = true;
-        } else {
-            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
-        }
+        let response = self.db_manager.post("http://localhost/post")
+            .body(envelope)
+            .send();
+        self.update_state_by_server_reply(response);
     }
     pub fn delete_database(&mut self, database_dir_path: String, database_name: String) {
         let client_req = ClientRequest::new(
@@ -192,12 +175,10 @@ impl App {
             None
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        if let Some(connector) = self.db_manager.as_ref() {
-            connector.send(envelope.as_slice());
-            self.sent_req = true;
-        } else {
-            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
-        }
+        let response = self.db_manager.post("http://localhost/post")
+            .body(envelope)
+            .send();
+        self.update_state_by_server_reply(response);
     }
 
     pub fn create_table(&mut self, table_name: String, columns: String, data_types: String) {
