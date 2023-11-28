@@ -24,18 +24,8 @@ impl Handler for Mediator {
 
 fn main() -> Result<()> {
     let mut app = App::new();
-    let context = Arc::new(zmq::Context::new());
-    let connector = ConnectorBuilder::new()
-        .with_context(context)
-        .with_endpoint(SERVER_ENDPOINT.to_string())
-        .with_handler(Rc::new(Mediator { }))
-        .build_requester()
-        .connect()
-        .into_inner();
-    let mut poller = Poller::new();
-    poller.add(connector.clone() as Rc<dyn Socket>);
 
-    app.set_connector(connector.clone());
+    app.set_connector();
 
     let backend = CrosstermBackend::new(std::io::stderr());
     let terminal = Terminal::new(backend)?;
@@ -59,8 +49,7 @@ fn main() -> Result<()> {
                 update(&mut app, key_event);
                 // poll will return the result if it is there
                 if app.is_sent_req() {
-                    let server_reply = poller.poll(1); // -> Option<Vec<u8>> (so, it doesn't necessary need to return anything )
-                    app.update_state_by_server_reply(server_reply);
+                    app.update_state_by_server_reply();
                 }
                 // then result is being returned and we can pass it to the app to save the result
             },
