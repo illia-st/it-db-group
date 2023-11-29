@@ -48,7 +48,7 @@ impl DatabaseManager {
     }
 
     pub fn create_db(&self, name: &str, location: &str) -> Result<(), String> {
-        let _ = self.close_db(true);
+        let _ = self.close_db();
         // check if such a dir is existing
         // // create a file for database
         // if let Ok(metadata) = fs::metadata(location) {
@@ -73,7 +73,7 @@ impl DatabaseManager {
     pub fn read_db_from_directory(&self, dir: &str, file_name: &str) -> Result<(), String> {
         let location = &format!("{}/{}", dir, file_name);
         // need to close the previous one
-        let _ = self.close_db(true);
+        let _ = self.close_db();
         // check if provided location is a dir
         match fs::metadata(location) {
             Ok(metadata) => {
@@ -613,7 +613,7 @@ impl DatabaseManager {
 
 impl Drop for DatabaseManager {
     fn drop(&mut self) {
-        let _ = self.close_db(true);
+        let _ = self.close_db();
     }
 }
 

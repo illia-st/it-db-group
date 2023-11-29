@@ -31,7 +31,7 @@ impl Server {
             let db_manager_connector = ConnectorBuilder::new()
                 .with_context(context.clone())
                 .with_endpoint(DB_MANAGER_ENDPOINT.to_string())
-                .with_handler(Rc::new(DbManagerHandler::new(manager)))
+                .with_handler(Rc::new(DbManagerHandler::new(manager, self.mongo)))
                 .build_replyer()
                 .bind()
                 .into_inner();

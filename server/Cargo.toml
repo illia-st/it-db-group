@@ -14,3 +14,4 @@ log.workspace = true
 threadpool = "1.8.1"
 zmq = "0.10.0"
 mongodb = { version = "2.7.1", default-features = false, features = ["sync"] }
+bson = "2.7.0"
