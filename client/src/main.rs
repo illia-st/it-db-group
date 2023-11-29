@@ -12,6 +12,7 @@ use transport::connectors::builder::ConnectorBuilder;
 use transport::connectors::core::{Handler, Receiver, Sender, Socket};
 use transport::connectors::poller::Poller;
 
+
 const SERVER_ENDPOINT: &str = "tcp://0.0.0.0:4044";
 
 struct Mediator { }
@@ -60,4 +61,8 @@ fn main() -> Result<()> {
 
     tui.exit()?;
     Ok(())
+}
+
+pub mod db_manager{
+    tonic::include_proto!("db");
 }

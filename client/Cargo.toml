@@ -10,6 +10,8 @@ core = { path = "../core" }
 db-manager = { path = "../db-manager" }
 transport = { path = "../transport" }
 db-api = { path = "../db-api" }
+tonic = "0.7" 
+prost = "0.12"
 env_logger.workspace = true
 log.workspace = true
 
@@ -23,3 +25,5 @@ zmq = "0.10.0"
 tungstenite = "0.20.1"
 url = "2.5.0"
 
+[build-dependencies]
+tonic-build = "0.7"

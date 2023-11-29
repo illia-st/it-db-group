@@ -1,12 +1,12 @@
 use std::net::TcpStream;
 use std::ops::Deref;
 use std::rc::Rc;
+use tungstenite::http::response;
 use url::Url;
 
 use tungstenite::client::connect;
 use tungstenite::stream::MaybeTlsStream;
 use tungstenite::{Message, WebSocket};
-use db_manager::db_manager::DatabaseManager;
 use core::{self, table::Table};
 use db_api::client_req::ClientRequest;
 use db_api::{Decoder, Encoder};
@@ -14,6 +14,13 @@ use db_api::db::DatabaseDTO;
 use db_api::envelope::Envelope;
 use transport::connectors::connector::Connector;
 use transport::connectors::core::{Handler, Receiver, Sender};
+
+use db_manager::Data;
+use db_manager::database_manager_client::DatabaseManagerClient;
+
+pub mod db_manager{
+    tonic::include_proto!("db");
+}
 
 pub enum Action {
     Tick,
@@ -54,7 +61,6 @@ pub struct App {
     should_quit: bool,
     database_state: DatabaseState,
     buffer: String,
-    database_manager: DatabaseManager,
 
     displayed_table: usize,
     selected_table: usize,
@@ -71,7 +77,6 @@ impl App {
             should_quit: false,
             database_state: DatabaseState::Closed(ClosedDatabaseAppState::None),
             buffer: "".to_string(),
-            database_manager: Default::default(),
             displayed_table: 0,
             selected_table: 0,
             selected_row: 0,
@@ -150,12 +155,20 @@ impl App {
             None,
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        if let Some(connector) = self.db_manager.as_mut() {
-            connector.send(Message::Binary(envelope)).unwrap();
-            self.sent_req = true;
-        } else {
-            self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
-        }
+        let mut client = DatabaseManagerClient::connect("https://localhost:7193").await?;
+        let data = tonic::Request::new(
+            Data{
+                data: envelope
+            }
+        );
+        let response = client.create_database(data).await?;
+        self.sent_req = true;
+        // if let Some(connector) = self.db_manager.as_mut() {
+        //     connector.send(Message::Binary(envelope)).unwrap();
+        //     self.sent_req = true;
+        // } else {
+        //     self.opening_database_error("couldn't send request to the server, connector isn't set up".to_string());
+        // }
     }
     pub fn open_database(&mut self, database_dir_path: String, database_name: String) {
         let client_req = ClientRequest::new(
@@ -426,4 +439,6 @@ impl App {
             },
         }
     }
+
+
 }

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package db;
+
+service DatabaseManager{
+	rpc CreateDatabase(Data) returns (DatabaseManagerReply);
+}
+
+message Data{
+	bytes data = 1;
+}
+
+message DatabaseManagerReply{
+	bytes reply = 1;
+}
