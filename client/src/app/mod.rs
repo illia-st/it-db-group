@@ -145,7 +145,7 @@ impl App {
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
         let response = self.db_manager.get("http://localhost/get")
-            .body(envelope)
+            .query(envelope.as_slice())
             .send();
         self.update_state_by_server_reply(response);
     }
