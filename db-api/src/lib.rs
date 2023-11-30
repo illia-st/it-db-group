@@ -17,3 +17,4 @@ pub mod picture_value_dto;
 pub mod date_value_dto;
 pub mod email_value_dto;
 pub mod scheme_dto;
+pub mod client_req;

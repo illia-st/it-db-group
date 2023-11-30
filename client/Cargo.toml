@@ -1,5 +1,5 @@
 [package]
-name = "runner"
+name = "client"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,6 +8,10 @@ edition = "2021"
 [dependencies]
 core = { path = "../core" }
 db-manager = { path = "../db-manager" }
+transport = { path = "../transport" }
+db-api = { path = "../db-api" }
+env_logger.workspace = true
+log.workspace = true
 
 anyhow = "1.0.75"
 clap = { version = "4.4.6", features = ["derive"] }
@@ -15,3 +19,6 @@ crossterm = "0.27.0"
 ratatui = { version = "0.23.0", features = ["all-widgets"] }
 rand = "0.8.5"
 shellwords = "1.1.0"
+zmq = "0.10.0"
+reqwest = { version = "0.11.22", features = ["blocking"] }
+
