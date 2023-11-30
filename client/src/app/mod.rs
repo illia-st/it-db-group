@@ -182,7 +182,7 @@ impl App {
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
         let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(","); 
-        let response = self.db_manager.post("http://localhost:8000/post")
+        let response = self.db_manager.delete("http://localhost:8000/delete")
             .body(data)
             .send();
         self.update_state_by_server_reply(response);
