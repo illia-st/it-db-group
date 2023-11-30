@@ -58,6 +58,23 @@ public:
     return createResponse(Status::CODE_200, received_message.c_str());
   }
 
+  ENDPOINT("DELETE", "/delete", del, BODY_STRING(oatpp::String, data)) {
+    std::string requestData = data->c_str();
+    std::cout << "Run delete endpoint with data " << requestData << std::endl;
+    m_zmqSocket.send(requestData.data(), requestData.size(), 0);
+
+    zmq::message_t message;
+    const auto ret = m_zmqSocket.recv(message);
+
+    if (!ret.has_value()) {
+        return createResponse(Status::CODE_500, "Error receiving message from server");
+    }
+
+    std::string received_message = std::string(static_cast<char*>(message.data()), message.size());
+
+    return createResponse(Status::CODE_200, received_message.c_str());
+  }
+
   ENDPOINT("POST", "/post", post, BODY_STRING(oatpp::String, data)) {
     std::string requestData = data->c_str();
     std::cout << "Run post endpoint with data " << requestData << std::endl;
@@ -75,22 +92,7 @@ public:
     return createResponse(Status::CODE_200, received_message.c_str());
   }
 
-  ENDPOINT("DELETE", "/delete", post, BODY_STRING(oatpp::String, data)) {
-    std::string requestData = data->c_str();
-    std::cout << "Run delete endpoint with data " << requestData << std::endl;
-    m_zmqSocket.send(requestData.data(), requestData.size(), 0);
-
-    zmq::message_t message;
-    const auto ret = m_zmqSocket.recv(message);
-
-    if (!ret.has_value()) {
-        return createResponse(Status::CODE_500, "Error receiving message from server");
-    }
-
-    std::string received_message = std::string(static_cast<char*>(message.data()), message.size());
-
-    return createResponse(Status::CODE_200, received_message.c_str());
-  }
+  
 
 };
 
