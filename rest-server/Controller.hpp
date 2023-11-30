@@ -29,7 +29,7 @@ public:
 
 public:
 
-  ENDPOINT("GET", "/get", get, QUERY(String, data)) {
+  ENDPOINT("GET", "/get", get, QUERY(oatpp::String, data)) {
     std::string requestData = data->c_str();
     std::cout << "Run get endpoint with data " << requestData << std::endl;
     m_zmqSocket.send(requestData.data(), requestData.size(), 0);
@@ -46,7 +46,7 @@ public:
     return createResponse(Status::CODE_200, received_message.c_str());
   }
 
-  ENDPOINT("POST", "/post", post, BODY_STRING(String, data)) {
+  ENDPOINT("POST", "/post", post, BODY_STRING(oatpp::String, data)) {
     std::string requestData = data->c_str();
     std::cout << "Run post endpoint with data " << requestData << std::endl;
     m_zmqSocket.send(requestData.data(), requestData.size(), 0);

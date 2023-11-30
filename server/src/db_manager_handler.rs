@@ -18,8 +18,13 @@ impl DbManagerHandler {
 impl Handler for DbManagerHandler {
     fn handle(&self, receiver: &dyn Receiver, sender: &dyn Sender) -> Option<Vec<u8>> {
         log::debug!("performing simple echo server");
+        // decode vec<u8> to string
         let received_data = receiver.recv();
-        let envelope = Envelope::decode(received_data.as_slice());
+        // string decode to vec<u8>
+        let bytes_string = String::from_utf8(received_data).unwrap();
+        log::info!("bytes_string: {bytes_string}");
+        let data = bytes_string.split(",").map(|c| c.parse().unwrap()).collect::<Vec<u8>>();
+        let envelope = Envelope::decode(data.as_slice());
         let client_req = ClientRequest::decode(envelope.get_data().to_vec());
         log::debug!("client request {:?}", client_req);
         // need to return bytes from this match
@@ -78,7 +83,8 @@ impl Handler for DbManagerHandler {
             },
             _ => panic!("other commands aren't supported"),
         };
-        sender.send(result.as_slice());
+        let res = result.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(",");
+        sender.send(res.as_bytes());
         None
     }
 }

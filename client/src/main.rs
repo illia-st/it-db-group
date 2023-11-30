@@ -35,7 +35,7 @@ fn main() -> Result<()> {
     // TODO: run a client here, give the connector as a parameter to the improvised handler
 
     while !app.should_quit() {
-        tui.draw(&mut app)?;
+        tui.draw(&mut app)?;                                         
 
         match tui.events.next()? {
             Event::Tick => {},

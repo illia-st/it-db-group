@@ -93,7 +93,8 @@ impl App {
             self.opening_database_error(format!("couldn't send request to the server: {}", response.err().unwrap()));
             return;
         };
-        let data = response.bytes().expect("expected to get response in bytes");
+        let data = response.text().unwrap().split(",").map(|c| c.parse().unwrap()).collect::<Vec<u8>>();
+
         let envelope = Envelope::decode(data.as_ref());
         match envelope.get_type() {
             "create" => {
@@ -131,7 +132,7 @@ impl App {
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
         // investigate it later
-        let response = self.db_manager.post("http://localhost/post")
+        let response = self.db_manager.post("http://localhost:8000/post")
             .body(envelope)
             .send();
         self.update_state_by_server_reply(response);
@@ -144,8 +145,9 @@ impl App {
             None
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(",");
         let response = self.db_manager.get("http://localhost/get")
-            .query(envelope.as_slice())
+            .query(data.as_str())
             .send();
         self.update_state_by_server_reply(response);
     }
@@ -162,7 +164,7 @@ impl App {
             db_to_save
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        let response = self.db_manager.post("http://localhost/post")
+        let response = self.db_manager.post("http://localhost:8000/post")
             .body(envelope)
             .send();
         self.update_state_by_server_reply(response);
