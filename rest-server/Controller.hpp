@@ -10,6 +10,17 @@
 // Include ZeroMQ headers
 #include <zmq.hpp>
 
+void replacePercent2C(std::string &str) {
+    size_t pos = 0;
+    const std::string target = "%2C";
+    const std::string replacement = ",";
+
+    while ((pos = str.find(target, pos)) != std::string::npos) {
+        str.replace(pos, target.length(), replacement);
+        pos += replacement.length();
+    }
+}
+
 #include OATPP_CODEGEN_BEGIN(ApiController)
 
 class Controller : public oatpp::web::server::api::ApiController {
@@ -31,6 +42,7 @@ public:
 
   ENDPOINT("GET", "/get", get, QUERY(oatpp::String, data)) {
     std::string requestData = data->c_str();
+    replacePercent2C(requestData);
     std::cout << "Run get endpoint with data " << requestData << std::endl;
     m_zmqSocket.send(requestData.data(), requestData.size(), 0);
 

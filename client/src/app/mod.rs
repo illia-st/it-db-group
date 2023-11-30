@@ -131,9 +131,10 @@ impl App {
             None,
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        // investigate it later
+        let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(",");
+        
         let response = self.db_manager.post("http://localhost:8000/post")
-            .body(envelope)
+            .body(data)
             .send();
         self.update_state_by_server_reply(response);
     }
@@ -146,8 +147,10 @@ impl App {
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
         let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(",");
-        let response = self.db_manager.get("http://localhost/get")
-            .query(data.as_str())
+        // let data = data.as_bytes();
+        // let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join("");
+        let response = self.db_manager.get("http://localhost:8000/get")
+            .query(&[("data", data)])
             .send();
         self.update_state_by_server_reply(response);
     }
@@ -164,8 +167,9 @@ impl App {
             db_to_save
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
+        let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(",");
         let response = self.db_manager.post("http://localhost:8000/post")
-            .body(envelope)
+            .body(data)
             .send();
         self.update_state_by_server_reply(response);
     }
@@ -177,8 +181,9 @@ impl App {
             None
         ).encode();
         let envelope  = Envelope::new("client_req", client_req.as_slice()).encode();
-        let response = self.db_manager.post("http://localhost/post")
-            .body(envelope)
+        let data = envelope.iter().map(|&b| b.to_string()).collect::<Vec<String>>().join(","); 
+        let response = self.db_manager.post("http://localhost:8000/post")
+            .body(data)
             .send();
         self.update_state_by_server_reply(response);
     }
