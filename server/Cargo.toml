@@ -1,0 +1,17 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+db-manager = { path = "../db-manager" }
+transport = { path = "../transport" }
+db-api = { path = "../db-api" }
+env_logger.workspace = true
+log.workspace = true
+threadpool = "1.8.1"
+zmq = "0.10.0"
+mongodb = { version = "2.7.1", default-features = false, features = ["sync"] }
+bson = "2.7.0"

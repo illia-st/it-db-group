@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -37,19 +37,29 @@ impl DatabaseManager {
             database: RefCell::new(None),
         }
     }
+    pub fn get_db(&self) -> Option<DatabaseDTO> {
+        if let Some(db) = self.database.borrow().as_ref() {
+            let dto: DatabaseDTO = DatabaseDTO::from(db);
+            log::info!("opening db {:?}", dto);
+            Some(dto)
+        } else {
+            None
+        }
+    }
+
     pub fn create_db(&self, name: &str, location: &str) -> Result<(), String> {
-        let _ = self.close_db(true);
+        let _ = self.close_db();
         // check if such a dir is existing
-        if let Ok(metadata) = fs::metadata(location) {
-            if !metadata.is_dir() {
-                return Err("provided path points to the file or symlink".to_string());
-            }
-        }
-        // create a file for database
-        match File::create(format!("{}/{}", location, name)) {
-            Ok(_) => (),
-            Err(err) => return Err(format!("couldn't create a file: {err}"))
-        }
+        // // create a file for database
+        // if let Ok(metadata) = fs::metadata(location) {
+        //     if !metadata.is_dir() {
+        //         return Err("provided path points to the file or symlink".to_string());
+        //     }
+        // }
+        // match File::create(format!("{}/{}", location, name)) {
+        //     Ok(_) => (),
+        //     Err(err) => return Err(format!("couldn't create a file: {err}"))
+        // }
         // build db-manager using Database::builder()
         let database = Database::builder()
             .with_location(location)
@@ -63,7 +73,7 @@ impl DatabaseManager {
     pub fn read_db_from_directory(&self, dir: &str, file_name: &str) -> Result<(), String> {
         let location = &format!("{}/{}", dir, file_name);
         // need to close the previous one
-        let _ = self.close_db(true);
+        let _ = self.close_db();
         // check if provided location is a dir
         match fs::metadata(location) {
             Ok(metadata) => {
@@ -83,8 +93,14 @@ impl DatabaseManager {
             }
         };
         let db_dto = DatabaseDTO::decode(database);
-        self.database.borrow_mut().replace(Database::from(db_dto));
+        self.set_db_dto(db_dto);
         Ok(())
+    }
+
+    pub fn set_db_dto(&self, db_dto: DatabaseDTO) {
+        log::debug!("setting a new db: {:?}", db_dto);
+        self.database.borrow_mut().replace(Database::from(db_dto));
+        log::debug!("a new db being set up, {:?}", self.database.borrow());
     }
     
     pub fn create_table(&self, table_name: &str, columns: Vec<&str>, data_types: Vec<&str>) -> Result<(), String> {
@@ -194,31 +210,33 @@ impl DatabaseManager {
         };
         res
     }
-    pub fn close_db(&self, save: bool) -> Result<(), String> {
+    pub fn close_db(&self) -> Result<(), String> {
         if self.database.borrow().is_none() {
             return Err("There is no active databases in db-manager manager".to_string());
         }
-        let db = self.database.take().unwrap();
-        let res = if save {
-            let db_dto: DatabaseDTO = db.into();
-            let location = &format!("{}/{}", db_dto.location, db_dto.name);
-            let fd = fs::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .truncate(true)
-                .open(location);
-            let mut file = match fd {
-                Ok(file) => file,
-                Err(err) => return Err(format!("couldn't open the file to save {}: {}", location, err))
-            };
-            match file.write_all(db_dto.encode().as_slice()) {
-                Ok(_) => Ok(()),
-                Err(err) => Err(format!("couldn't write to the file to save {}: {}", location, err)),
-            }
-        } else {
-            Ok(())
-        };
-        res
+        let _ = self.database.take().unwrap();
+        // let res = if save {
+        //     log::debug!("saving db {:?}", db);
+        //     let db_dto: DatabaseDTO = DatabaseDTO::from(&db);
+        //     log::debug!("dto to save {:?}", db_dto);
+        //     let location = &format!("{}/{}", db_dto.location, db_dto.name);
+        //     let fd = fs::OpenOptions::new()
+        //         .write(true)
+        //         .create(true)
+        //         .truncate(true)
+        //         .open(location);
+        //     let mut file = match fd {
+        //         Ok(file) => file,
+        //         Err(err) => return Err(format!("couldn't open the file to save {}: {}", location, err))
+        //     };
+        //     match file.write_all(db_dto.encode().as_slice()) {
+        //         Ok(_) => Ok(()),
+        //         Err(err) => Err(format!("couldn't write to the file to save {}: {}", location, err)),
+        //     }
+        // } else {
+        //     Ok(())
+        // };
+        Ok(())
     }
     pub fn delete_db(&self, dir: &str, file_name: &str) -> Result<(), String> {
         // TODO: it will be nice to check if the provided location actually is a db but who cares?
@@ -595,7 +613,7 @@ impl DatabaseManager {
 
 impl Drop for DatabaseManager {
     fn drop(&mut self) {
-        let _ = self.close_db(true);
+        let _ = self.close_db();
     }
 }
 
