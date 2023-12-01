@@ -1,17 +1,42 @@
-[workspace]
+[package]
+name = "db"
+version = "0.1.0"
+edition = "2021"
 
-members = [
-    "core",
-    "db-api",
-    "db-manager",
-    "value_generator",
-    "transport",
-    "server",
-    "client",
-]
+[[bin]]
+name = "server"
+path = "src/server.rs"
 
-resolver = "2"
+[[bin]]
+name = "client"
+path = "src/client.rs"
 
-[workspace.dependencies]
+[dependencies]
+value_generator = { git = "https://github.com/illia-st/value_generator.git" }
 log = "0.4.17"
 env_logger = "0.10.1"
+zmq = "0.10.0"
+threadpool = "1.8.1"
+simple-websockets = "0.1.6"
+image = "0.24.7"
+chrono = "0.4.31"
+lazy_static = "1.4.0"
+serde-email = "3.0.0"
+tonic = "0.7" 
+prost = "0.12"
+
+anyhow = "1.0.75"
+clap = { version = "4.4.6", features = ["derive"] }
+crossterm = "0.27.0"
+ratatui = { version = "0.23.0", features = ["all-widgets"] }
+rand = "0.8.5"
+shellwords = "1.1.0"
+tungstenite = "0.20.1"
+url = "2.5.0"
+
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+ion-rs = "0.18.1"
+
+[build-dependencies]
+tonic-build = "0.7"
+
