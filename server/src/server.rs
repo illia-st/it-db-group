@@ -13,7 +13,7 @@ pub struct Server {
 }
 
 const DB_MANAGER_ENDPOINT: &str = "tcp://0.0.0.0:4044";
-const MONGO_DB_ENDPOINT: &str = "mongodb://localhost:27017";
+const MONGO_DB_ENDPOINT: &str = "mongodb://admin:adminpassword@localhost:27017";
 impl Server {
     pub fn new(pool: ThreadPool) -> Self {
         let mongo = Client::with_uri_str(MONGO_DB_ENDPOINT).unwrap();

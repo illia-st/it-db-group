@@ -62,9 +62,10 @@ impl Handler for DbManagerHandler {
                 let res = collection.find_one(query, None).unwrap();
 
                 if let Some(res) = res {
-                    let data: String = res.get("db").unwrap().to_string();
+                    let data: String = res.get("db").unwrap().as_str().unwrap().to_string();
                     let db = DatabaseDTO::decode(data.split(",").map(|s| s.parse().unwrap()).collect());
                     log::debug!("open success: {:?}", db);
+                    self.manager.set_db_dto(db.clone());
                     Envelope::new("open", db.encode().as_slice()).encode()
                 } else {
                     log::debug!("error");
