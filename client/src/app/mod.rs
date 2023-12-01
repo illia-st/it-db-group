@@ -104,7 +104,7 @@ impl App {
             },
             "delete" => {
                 self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
-                let _ = self.database_manager.close_db(false);
+                let _ = self.database_manager.close_db();
             },
             "open" => {
                 let db_dto = DatabaseDTO::decode(envelope.get_data().to_vec());
@@ -113,7 +113,7 @@ impl App {
             },
             "close" => {
                 self.database_state = DatabaseState::Closed(ClosedDatabaseAppState::None);
-                let _ = self.database_manager.close_db(false);
+                let _ = self.database_manager.close_db();
             },
             "error" => {
                 let error = String::from_utf8(envelope.get_data().to_vec()).unwrap();
