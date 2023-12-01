@@ -20,4 +20,5 @@ ratatui = { version = "0.23.0", features = ["all-widgets"] }
 rand = "0.8.5"
 shellwords = "1.1.0"
 zmq = "0.10.0"
+reqwest = { version = "0.11.22", features = ["blocking"] }
 
